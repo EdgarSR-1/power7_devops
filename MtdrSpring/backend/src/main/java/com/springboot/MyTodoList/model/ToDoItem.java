@@ -30,4 +30,36 @@ public class ToDoItem {
 
     @Column(name = "creation_ts")
     private OffsetDateTime creation_ts;
+
+    public Integer getID() {
+        return ID;
+    }
+
+    public void setID(Integer ID) {
+        this.ID = ID;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public boolean isDone() {
+        return done;
+    }
+
+    public void setDone(boolean done) {
+        this.done = done;
+    }
+
+    public OffsetDateTime getCreation_ts() {
+        return creation_ts;
+    }
+
+    public void setCreation_ts(OffsetDateTime creation_ts) {
+        this.creation_ts = creation_ts;
+    }
 }

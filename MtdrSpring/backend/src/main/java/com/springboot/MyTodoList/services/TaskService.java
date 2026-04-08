@@ -12,6 +12,10 @@ public class TaskService {
 
     private final TaskRepository repository;
 
+    public TaskService(TaskRepository repository) {
+        this.repository = repository;
+    }
+
     public List<Task> findAll() {
         return repository.findAll();
     }

@@ -14,6 +14,10 @@ public class ToDoItemService {
 
     private final ToDoItemRepository repository;
 
+    public ToDoItemService(ToDoItemRepository repository) {
+        this.repository = repository;
+    }
+
     public List<ToDoItem> findAll() {
         return repository.findAll();
     }

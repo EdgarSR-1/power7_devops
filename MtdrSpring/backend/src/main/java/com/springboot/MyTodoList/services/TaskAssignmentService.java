@@ -11,6 +11,10 @@ public class TaskAssignmentService {
 
     private final TaskAssignmentRepository repository;
 
+    public TaskAssignmentService(TaskAssignmentRepository repository) {
+        this.repository = repository;
+    }
+
     public TaskAssignment save(TaskAssignment assignment) {
         return repository.save(assignment);
     }

@@ -12,6 +12,10 @@ public class TaskGroupService {
 
     private final TaskGroupRepository repository;
 
+    public TaskGroupService(TaskGroupRepository repository) {
+        this.repository = repository;
+    }
+
     public List<TaskGroup> findAll() {
         return repository.findAll();
     }

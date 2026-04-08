@@ -12,6 +12,10 @@ public class TodoListService {
 
     private final TodoListRepository repository;
 
+    public TodoListService(TodoListRepository repository) {
+        this.repository = repository;
+    }
+
     public List<TodoList> findAll() {
         return repository.findAll();
     }
