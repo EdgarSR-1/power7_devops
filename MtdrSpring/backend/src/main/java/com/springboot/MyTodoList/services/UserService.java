@@ -1,3 +1,11 @@
+package com.springboot.MyTodoList.services;
+
+import com.springboot.MyTodoList.model.User;
+import com.springboot.MyTodoList.repository.UserRepository;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -18,5 +26,9 @@ public class UserService {
 
     public void delete(Long id) {
         userRepository.deleteById(id);
+    }
+
+    public User findById(Integer id) {
+        return findById(id.longValue());
     }
 }

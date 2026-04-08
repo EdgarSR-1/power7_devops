@@ -1,6 +1,6 @@
 package com.springboot.MyTodoList.controller;
 import com.springboot.MyTodoList.model.User;
-import com.springboot.MyTodoList.service.UserService;
+import com.springboot.MyTodoList.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -24,8 +24,8 @@ public class UserController {
     @GetMapping(value = "/users/{id}")
     public ResponseEntity<User> getUserById(@PathVariable int id){
         try{
-            ResponseEntity<User> responseEntity = userService.getUserById(id);
-            return new ResponseEntity<User>(responseEntity.getBody(), HttpStatus.OK);
+            User user = userService.findById((long) id);
+            return new ResponseEntity<>(user, HttpStatus.OK);
         }catch (Exception e){
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
@@ -33,9 +33,9 @@ public class UserController {
     //@CrossOrigin
     @PostMapping(value = "/adduser")
     public ResponseEntity<User> addUser(@RequestBody User newUser) throws Exception{
-        User dbUser = userService.addUser(newUser);
+        User dbUser = userService.save(newUser);
         HttpHeaders responseHeaders = new HttpHeaders();
-        responseHeaders.set("location",""+dbUser.getID());
+        responseHeaders.set("location",""+dbUser.getId());
         responseHeaders.set("Access-Control-Expose-Headers","location");
         //URI location = URI.create(""+td.getID())
 
@@ -46,8 +46,8 @@ public class UserController {
     @PutMapping(value = "updateUser/{id}")
     public ResponseEntity<User> updateUser(@RequestBody User user, @PathVariable int id){
         try{
-            User dbUser = userService.updateUser(id, user);
-            
+            user.setId((long) id);
+            User dbUser = userService.save(user);
             return new ResponseEntity<>(dbUser,HttpStatus.OK);
         }catch (Exception e){
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
@@ -56,19 +56,18 @@ public class UserController {
     //@CrossOrigin
     @DeleteMapping(value = "deleteUser/{id}")
     public ResponseEntity<Boolean> deleteUser(@PathVariable("id") int id){
-        Boolean flag = false;
         try{
-            flag = userService.deleteUser(id);
-            return new ResponseEntity<>(flag, HttpStatus.OK);
+            userService.delete((long) id);
+            return new ResponseEntity<>(true, HttpStatus.OK);
         }catch (Exception e){
-            return new ResponseEntity<>(flag,HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>(false,HttpStatus.NOT_FOUND);
         }
     }
 
 
     @GetMapping(value = "/unitTestAdd")
     public User test(){
-        return userService.test();
+        return new User();
     }
 
 

@@ -24,8 +24,6 @@ import java.sql.SQLException;
 public class OracleConfiguration {
     Logger logger = LoggerFactory.getLogger(DbSettings.class);
     @Autowired
-    private DbSettings dbSettings;
-    @Autowired
     private Environment env;
     @Bean
     public DataSource dataSource() throws SQLException{
