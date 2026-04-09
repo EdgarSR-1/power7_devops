@@ -1,74 +1,33 @@
 package com.springboot.MyTodoList.model;
 
-
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-/*
-    representation of the TODOITEM table that exists already
-    in the autonomous database
- */
 @Entity
-@Table(name = "TODOITEM")
+@Table(name = "todoitem")
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class ToDoItem {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    int ID;
-    @Column(name = "DESCRIPTION")
-    String description;
-    @Column(name = "CREATION_TS")
-    OffsetDateTime creation_ts;
-    @Column(name = "done")
-    boolean done;
-    public ToDoItem(){
+    private Integer ID;
 
-    }
-    public ToDoItem(int ID, String description, OffsetDateTime creation_ts, boolean done) {
-        this.ID = ID;
-        this.description = description;
-        this.creation_ts = creation_ts;
-        this.done = done;
-    }
+    @Column(nullable = false)
+    private String description;
 
-    public int getID() {
-        return ID;
-    }
+    @Column(nullable = false)
+    private boolean done;
 
-    public void setID(int ID) {
-        this.ID = ID;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public OffsetDateTime getCreation_ts() {
-        return creation_ts;
-    }
-
-    public void setCreation_ts(OffsetDateTime creation_ts) {
-        this.creation_ts = creation_ts;
-    }
-
-    public boolean isDone() {
-        return done;
-    }
-
-    public void setDone(boolean done) {
-        this.done = done;
-    }
-
-    @Override
-    public String toString() {
-        return "ToDoItem{" +
-                "ID=" + ID +
-                ", description='" + description + '\'' +
-                ", creation_ts=" + creation_ts +
-                ", done=" + done +
-                '}';
-    }
+    @Column(name = "creation_ts")
+    private OffsetDateTime creation_ts;
 }
