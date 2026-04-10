@@ -2,33 +2,27 @@ package com.springboot.MyTodoList.services;
 
 import com.springboot.MyTodoList.model.User;
 import com.springboot.MyTodoList.repository.UserRepository;
-import java.util.List;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
-@RequiredArgsConstructor
 public class UserService {
 
-    private final UserRepository userRepository;
+    private final UserRepository repo;
 
-    public List<User> findAll() {
-        return userRepository.findAll();
+    public UserService(UserRepository repo) {
+        this.repo = repo;
     }
 
-    public User findById(Long id) {
-        return userRepository.findById(id).orElseThrow();
+    public List<User> getAllUsers() {
+        return repo.findAll();
     }
 
-    public User save(User user) {
-        return userRepository.save(user);
-    }
-
-    public void delete(Long id) {
-        userRepository.deleteById(id);
-    }
-
-    public User findById(Integer id) {
-        return findById(id.longValue());
+    public User createUser(User user) {
+        if (repo.existsByEmail(user.getEmail())) {
+            throw new RuntimeException("Email already exists");
+        }
+        return repo.save(user);
     }
 }

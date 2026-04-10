@@ -1,26 +1,48 @@
-package com.springboot.MyTodoList.services;
+package com.springboot.MyTodoList.service;
 
 import com.springboot.MyTodoList.model.TodoList;
 import com.springboot.MyTodoList.repository.TodoListRepository;
-import java.util.List;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
-@RequiredArgsConstructor
 public class TodoListService {
 
-    private final TodoListRepository repository;
+    private final TodoListRepository todoListRepository;
 
-    public List<TodoList> findAll() {
-        return repository.findAll();
+    public TodoListService(TodoListRepository todoListRepository) {
+        this.todoListRepository = todoListRepository;
     }
 
-    public TodoList save(TodoList list) {
-        return repository.save(list);
+    public TodoList createTodoList(TodoList todoList) {
+        return todoListRepository.save(todoList);
     }
 
-    public void delete(Long id) {
-        repository.deleteById(id);
+    public List<TodoList> getAllTodoLists() {
+        return todoListRepository.findAll();
+    }
+
+    public TodoList getTodoListById(Long id) {
+        return todoListRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Todo list not found"));
+    }
+
+    public List<TodoList> getTodoListsByGroupId(Long groupId) {
+        return todoListRepository.findByGroupId(groupId);
+    }
+
+    public TodoList updateTodoList(Long id, TodoList updatedTodoList) {
+        TodoList existing = getTodoListById(id);
+
+        existing.setName(updatedTodoList.getName());
+        existing.setGroup(updatedTodoList.getGroup());
+        existing.setCreatedBy(updatedTodoList.getCreatedBy());
+
+        return todoListRepository.save(existing);
+    }
+
+    public void deleteTodoList(Long id) {
+        todoListRepository.deleteById(id);
     }
 }

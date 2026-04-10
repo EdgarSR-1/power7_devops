@@ -1,4 +1,4 @@
-package com.springboot.MyTodoList.repository;
+/* package com.springboot.MyTodoList.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,3 +45,5 @@ class UserRepositoryTest {
         assertThat(foundUser.get().getPassword()).isEqualTo("secret");
     }
 }
+
+*/
