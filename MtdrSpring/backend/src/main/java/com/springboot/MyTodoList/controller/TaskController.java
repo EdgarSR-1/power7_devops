@@ -1,25 +1,36 @@
 package com.springboot.MyTodoList.controller;
 
-import com.springboot.MyTodoList.model.Task;
-import com.springboot.MyTodoList.repository.TaskRepository;
-
+import org.springframework.web.bind.annotation.CrossOrigin;
+import com.springboot.MyTodoList.dto.TaskRequestDTO;
+import com.springboot.MyTodoList.dto.TaskResponseDTO;
+import com.springboot.MyTodoList.service.TaskService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@CrossOrigin(origins = "http://localhost:3000")
 @RestController
 @RequestMapping("/api/tasks")
-@CrossOrigin
 public class TaskController {
 
-    private final TaskRepository repo;
+    private final TaskService taskService;
 
-    public TaskController(TaskRepository repo) {
-        this.repo = repo;
+    public TaskController(TaskService taskService) {
+        this.taskService = taskService;
+    }
+
+    @PostMapping
+    public TaskResponseDTO createTask(@RequestBody TaskRequestDTO dto) {
+        return taskService.createTask(dto);
     }
 
     @GetMapping
-    public List<Task> getTasks() {
-        return repo.findAll();
+    public List<TaskResponseDTO> getAllTasks() {
+        return taskService.getAllTasks();
+    }
+
+    @GetMapping("/{id}")
+    public TaskResponseDTO getTaskById(@PathVariable Long id) {
+        return taskService.getTaskById(id);
     }
 }

@@ -1,30 +1,97 @@
-package com.springboot.MyTodoList.services;
+package com.springboot.MyTodoList.service;
 
+import com.springboot.MyTodoList.dto.TaskRequestDTO;
+import com.springboot.MyTodoList.dto.TaskResponseDTO;
 import com.springboot.MyTodoList.model.Task;
+import com.springboot.MyTodoList.model.TaskPriority;
+import com.springboot.MyTodoList.model.TaskStatus;
+import com.springboot.MyTodoList.model.TodoList;
+import com.springboot.MyTodoList.model.User;
 import com.springboot.MyTodoList.repository.TaskRepository;
-import java.util.List;
-import lombok.RequiredArgsConstructor;
+import com.springboot.MyTodoList.repository.TodoListRepository;
+import com.springboot.MyTodoList.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
-@RequiredArgsConstructor
 public class TaskService {
 
-    private final TaskRepository repository;
+    private final TaskRepository taskRepository;
+    private final TodoListRepository todoListRepository;
+    private final UserRepository userRepository;
 
-    public List<Task> findAll() {
-        return repository.findAll();
+    public TaskService(TaskRepository taskRepository,
+                       TodoListRepository todoListRepository,
+                       UserRepository userRepository) {
+        this.taskRepository = taskRepository;
+        this.todoListRepository = todoListRepository;
+        this.userRepository = userRepository;
     }
 
-    public Task save(Task task) {
-        return repository.save(task);
+    public TaskResponseDTO createTask(TaskRequestDTO dto) {
+        TodoList todoList = todoListRepository.findById(dto.getListId())
+                .orElseThrow(() -> new RuntimeException("TodoList not found"));
+
+        User createdBy = null;
+        if (dto.getCreatedById() != null) {
+            createdBy = userRepository.findById(dto.getCreatedById())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+        }
+
+        Task task = new Task();
+        task.setTodoList(todoList);
+        task.setTitle(dto.getTitle());
+        task.setDescription(dto.getDescription());
+
+        if (dto.getStatus() != null) {
+            task.setStatus(TaskStatus.valueOf(dto.getStatus()));
+        }
+
+        if (dto.getPriority() != null) {
+            task.setPriority(TaskPriority.valueOf(dto.getPriority()));
+        }
+
+        task.setDueDate(dto.getDueDate());
+        task.setCreatedBy(createdBy);
+
+        Task savedTask = taskRepository.save(task);
+        return mapToResponseDTO(savedTask);
     }
 
-    public Task findById(Long id) {
-        return repository.findById(id).orElseThrow();
+    public List<TaskResponseDTO> getAllTasks() {
+        return taskRepository.findAll()
+                .stream()
+                .map(this::mapToResponseDTO)
+                .collect(Collectors.toList());
     }
 
-    public void delete(Long id) {
-        repository.deleteById(id);
+    public TaskResponseDTO getTaskById(Long id) {
+        Task task = taskRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+        return mapToResponseDTO(task);
+    }
+
+    private TaskResponseDTO mapToResponseDTO(Task task) {
+        String assigneeName = task.getCreatedBy() != null ? task.getCreatedBy().getName() : null;
+        String todoListName = task.getTodoList() != null ? task.getTodoList().getName() : null;
+        String groupName = null;
+
+        if (task.getTodoList() != null && task.getTodoList().getGroup() != null) {
+            groupName = task.getTodoList().getGroup().getName();
+        }
+
+        return new TaskResponseDTO(
+                task.getId(),
+                task.getTitle(),
+                task.getDescription(),
+                task.getStatus() != null ? task.getStatus().name() : null,
+                task.getPriority() != null ? task.getPriority().name() : null,
+                task.getCreatedAt(),
+                groupName,
+                todoListName,
+                assigneeName
+        );
     }
 }
