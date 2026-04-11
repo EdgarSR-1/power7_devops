@@ -3,7 +3,7 @@ package com.springboot.MyTodoList.controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import com.springboot.MyTodoList.dto.TaskRequestDTO;
 import com.springboot.MyTodoList.dto.TaskResponseDTO;
-import com.springboot.MyTodoList.service.TaskService;
+import com.springboot.MyTodoList.services.TaskService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

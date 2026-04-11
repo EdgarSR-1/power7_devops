@@ -1,7 +1,7 @@
 package com.springboot.MyTodoList.controller;
 
 import com.springboot.MyTodoList.model.TodoList;
-import com.springboot.MyTodoList.service.TodoListService;
+import com.springboot.MyTodoList.services.TodoListService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

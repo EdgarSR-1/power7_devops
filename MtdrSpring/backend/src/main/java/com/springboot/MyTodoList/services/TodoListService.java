@@ -1,4 +1,4 @@
-package com.springboot.MyTodoList.service;
+package com.springboot.MyTodoList.services;
 
 import com.springboot.MyTodoList.model.TodoList;
 import com.springboot.MyTodoList.repository.TodoListRepository;
