@@ -1,7 +1,12 @@
 package com.springboot.MyTodoList.util;
 
+import com.springboot.MyTodoList.model.Task;
+import com.springboot.MyTodoList.model.TaskGroup;
+import com.springboot.MyTodoList.model.TaskStatus;
 import com.springboot.MyTodoList.model.ToDoItem;
 import com.springboot.MyTodoList.service.DeepSeekService;
+import com.springboot.MyTodoList.service.TaskGroupService;
+import com.springboot.MyTodoList.service.TaskService;
 import com.springboot.MyTodoList.service.ToDoItemService;
 
 import java.time.OffsetDateTime;
@@ -17,6 +22,7 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 public class BotActions{
 
     private static final Logger logger = LoggerFactory.getLogger(BotActions.class);
+    private static final String GROUP_SELECTION_PREFIX = "GROUP::";
 
     String requestText;
     long chatId;
@@ -25,11 +31,15 @@ public class BotActions{
 
     ToDoItemService todoService;
     DeepSeekService deepSeekService;
+    TaskService taskService;
+    TaskGroupService taskGroupService;
 
-    public BotActions(TelegramClient tc,ToDoItemService ts, DeepSeekService ds){
+    public BotActions(TelegramClient tc, ToDoItemService ts, DeepSeekService ds, TaskService tks, TaskGroupService tgs){
         telegramClient = tc;
         todoService = ts;
         deepSeekService = ds;
+        taskService = tks;
+        taskGroupService = tgs;
         exit  = false;
     }
 
@@ -71,9 +81,100 @@ public class BotActions{
         BotHelper.sendMessageToTelegram(chatId, BotMessages.HELLO_MYTODO_BOT.getMessage(), telegramClient,  ReplyKeyboardMarkup
             .builder()
             .keyboardRow(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(),BotLabels.ADD_NEW_ITEM.getLabel()))
+            .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel()))
             .keyboardRow(new KeyboardRow(BotLabels.SHOW_MAIN_SCREEN.getLabel(),BotLabels.HIDE_MAIN_SCREEN.getLabel()))
             .build()
         );
+        exit = true;
+    }
+
+    public void fnListGroups() {
+        if (!(requestText.equals(BotLabels.LIST_GROUP_TASKS.getLabel())
+                || requestText.equals(BotLabels.SELECT_GROUP.getLabel())) || exit)
+            return;
+
+        List<TaskGroup> groups = taskGroupService.findAll();
+        ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup.builder()
+            .resizeKeyboard(true)
+            .oneTimeKeyboard(false)
+            .selective(true)
+            .build();
+
+        List<KeyboardRow> keyboard = new ArrayList<>();
+        KeyboardRow topRow = new KeyboardRow();
+        topRow.add(BotLabels.SHOW_MAIN_SCREEN.getLabel());
+        keyboard.add(topRow);
+
+        KeyboardRow titleRow = new KeyboardRow();
+        titleRow.add(BotLabels.SELECT_GROUP.getLabel());
+        keyboard.add(titleRow);
+
+        for (TaskGroup group : groups) {
+            KeyboardRow row = new KeyboardRow();
+            row.add(GROUP_SELECTION_PREFIX + group.getId() + BotLabels.DASH.getLabel() + group.getName());
+            keyboard.add(row);
+        }
+
+        keyboardMarkup.setKeyboard(keyboard);
+        BotHelper.sendMessageToTelegram(chatId, "Select a group", telegramClient, keyboardMarkup);
+        exit = true;
+    }
+
+    public void fnListGroupTasks() {
+        if (!requestText.startsWith(GROUP_SELECTION_PREFIX) || exit)
+            return;
+
+        try {
+            String payload = requestText.substring(GROUP_SELECTION_PREFIX.length());
+            String groupIdToken = payload.contains(BotLabels.DASH.getLabel())
+                    ? payload.substring(0, payload.indexOf(BotLabels.DASH.getLabel()))
+                    : payload;
+            Long groupId = Long.valueOf(groupIdToken);
+
+            List<Task> groupTasks = taskService.getTasksByGroupId(groupId);
+            List<Task> activeTasks = groupTasks.stream()
+                    .filter(task -> task.getStatus() != TaskStatus.completed)
+                    .collect(Collectors.toList());
+            List<Task> doneTasks = groupTasks.stream()
+                    .filter(task -> task.getStatus() == TaskStatus.completed)
+                    .collect(Collectors.toList());
+
+            ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup.builder()
+                    .resizeKeyboard(true)
+                    .oneTimeKeyboard(false)
+                    .selective(true)
+                    .build();
+            List<KeyboardRow> keyboard = new ArrayList<>();
+
+            KeyboardRow topRow = new KeyboardRow();
+            topRow.add(BotLabels.SHOW_MAIN_SCREEN.getLabel());
+            keyboard.add(topRow);
+
+            KeyboardRow actionsRow = new KeyboardRow();
+            actionsRow.add(BotLabels.SELECT_GROUP.getLabel());
+            keyboard.add(actionsRow);
+
+            for (Task task : activeTasks) {
+                KeyboardRow row = new KeyboardRow();
+                row.add(task.getTitle());
+                row.add(task.getStatus().name());
+                keyboard.add(row);
+            }
+
+            for (Task task : doneTasks) {
+                KeyboardRow row = new KeyboardRow();
+                row.add(task.getTitle());
+                row.add(task.getStatus().name());
+                keyboard.add(row);
+            }
+
+            keyboardMarkup.setKeyboard(keyboard);
+            BotHelper.sendMessageToTelegram(chatId, "Group tasks", telegramClient, keyboardMarkup);
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+            BotHelper.sendMessageToTelegram(chatId, "Could not load tasks for this group", telegramClient);
+        }
+
         exit = true;
     }
 

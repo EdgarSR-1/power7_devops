@@ -73,6 +73,10 @@ public class TaskService {
         return mapToResponseDTO(task);
     }
 
+    public List<Task> getTasksByGroupId(Long groupId) {
+        return taskRepository.findByTodoListGroupId(groupId);
+    }
+
     private TaskResponseDTO mapToResponseDTO(Task task) {
         String assigneeName = task.getCreatedBy() != null ? task.getCreatedBy().getName() : null;
         String todoListName = task.getTodoList() != null ? task.getTodoList().getName() : null;
