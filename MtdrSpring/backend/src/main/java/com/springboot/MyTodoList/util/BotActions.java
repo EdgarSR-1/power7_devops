@@ -31,6 +31,8 @@ public class BotActions{
     private static final String TASK_UNDO_PREFIX = "TASKUNDO::";
     private static final String TASK_DELETE_PREFIX = "TASKDEL::";
     private static final Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
+    private static final Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
+    private static final Map<Long, Map<String, String>> taskActionButtonsByChat = new ConcurrentHashMap<>();
 
     String requestText;
     long chatId;
@@ -77,6 +79,131 @@ public class BotActions{
 
     public DeepSeekService getDeepSeekService(){
         return deepSeekService;
+    }
+
+    private void clearTaskActionButtons() {
+        taskActionButtonsByChat.put(chatId, new ConcurrentHashMap<>());
+    }
+
+    private String registerTaskActionButton(String visibleLabel, String actionToken) {
+        taskActionButtonsByChat.computeIfAbsent(chatId, key -> new ConcurrentHashMap<>()).put(visibleLabel, actionToken);
+        return visibleLabel;
+    }
+
+    private String resolveTaskActionToken() {
+        if (requestText == null) {
+            return null;
+        }
+        if (requestText.startsWith(TASK_DONE_PREFIX)
+                || requestText.startsWith(TASK_UNDO_PREFIX)
+                || requestText.startsWith(TASK_DELETE_PREFIX)) {
+            return requestText;
+        }
+        Map<String, String> chatActions = taskActionButtonsByChat.get(chatId);
+        if (chatActions == null) {
+            return null;
+        }
+        return chatActions.get(requestText);
+    }
+
+    private void renderAllTasksMenu(String titleMessage) {
+        lastViewedGroupByChat.remove(chatId);
+        clearTaskActionButtons();
+        List<TaskResponseDTO> allTasks = taskService.getAllTasks();
+
+        ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup.builder()
+                .resizeKeyboard(true)
+                .oneTimeKeyboard(false)
+                .selective(true)
+                .build();
+
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
+        KeyboardRow mainScreenRowTop = new KeyboardRow();
+        mainScreenRowTop.add(BotLabels.SHOW_MAIN_SCREEN.getLabel());
+        keyboard.add(mainScreenRowTop);
+
+        KeyboardRow firstRow = new KeyboardRow();
+        firstRow.add(BotLabels.ADD_NEW_ITEM.getLabel());
+        keyboard.add(firstRow);
+
+        Map<String, List<TaskResponseDTO>> tasksByGroup = new LinkedHashMap<>();
+        for (TaskResponseDTO task : allTasks) {
+            String groupName = task.getGroupName() != null ? task.getGroupName() : "No Group";
+            tasksByGroup.computeIfAbsent(groupName, key -> new ArrayList<>()).add(task);
+        }
+
+        for (Map.Entry<String, List<TaskResponseDTO>> groupEntry : tasksByGroup.entrySet()) {
+            KeyboardRow groupTitleRow = new KeyboardRow();
+            groupTitleRow.add("[" + groupEntry.getKey() + "]");
+            keyboard.add(groupTitleRow);
+
+            for (TaskResponseDTO task : groupEntry.getValue()) {
+                KeyboardRow taskRow = new KeyboardRow();
+                taskRow.add(task.getTitle());
+                String status = task.getStatus() != null ? task.getStatus() : TaskStatus.pending.name();
+                if (TaskStatus.completed.name().equals(status)) {
+                    taskRow.add(registerTaskActionButton("Undo #" + task.getId(), TASK_UNDO_PREFIX + task.getId()));
+                    taskRow.add(registerTaskActionButton("Delete #" + task.getId(), TASK_DELETE_PREFIX + task.getId()));
+                } else {
+                    taskRow.add(registerTaskActionButton("Done #" + task.getId(), TASK_DONE_PREFIX + task.getId()));
+                }
+                keyboard.add(taskRow);
+            }
+        }
+
+        KeyboardRow mainScreenRowBottom = new KeyboardRow();
+        mainScreenRowBottom.add(BotLabels.SHOW_MAIN_SCREEN.getLabel());
+        keyboard.add(mainScreenRowBottom);
+
+        keyboardMarkup.setKeyboard(keyboard);
+        BotHelper.sendMessageToTelegram(chatId, titleMessage, telegramClient, keyboardMarkup);
+    }
+
+    private void renderGroupTasksMenu(Long groupId, String titleMessage) {
+        lastViewedGroupByChat.put(chatId, groupId);
+        clearTaskActionButtons();
+
+        List<Task> groupTasks = taskService.getTasksByGroupId(groupId);
+        List<Task> activeTasks = groupTasks.stream()
+                .filter(task -> task.getStatus() != TaskStatus.completed)
+                .collect(Collectors.toList());
+        List<Task> doneTasks = groupTasks.stream()
+                .filter(task -> task.getStatus() == TaskStatus.completed)
+                .collect(Collectors.toList());
+
+        ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup.builder()
+                .resizeKeyboard(true)
+                .oneTimeKeyboard(false)
+                .selective(true)
+                .build();
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
+        KeyboardRow topRow = new KeyboardRow();
+        topRow.add(BotLabels.SHOW_MAIN_SCREEN.getLabel());
+        keyboard.add(topRow);
+
+        KeyboardRow actionsRow = new KeyboardRow();
+        actionsRow.add(BotLabels.SELECT_GROUP.getLabel());
+        keyboard.add(actionsRow);
+
+        for (Task task : activeTasks) {
+            KeyboardRow row = new KeyboardRow();
+            row.add(task.getTitle());
+            row.add(registerTaskActionButton("Done #" + task.getId(), TASK_DONE_PREFIX + task.getId()));
+            keyboard.add(row);
+        }
+
+        for (Task task : doneTasks) {
+            KeyboardRow row = new KeyboardRow();
+            row.add(task.getTitle());
+            row.add(registerTaskActionButton("Undo #" + task.getId(), TASK_UNDO_PREFIX + task.getId()));
+            row.add(registerTaskActionButton("Delete #" + task.getId(), TASK_DELETE_PREFIX + task.getId()));
+            keyboard.add(row);
+        }
+
+        keyboardMarkup.setKeyboard(keyboard);
+        BotHelper.sendMessageToTelegram(chatId, titleMessage, telegramClient, keyboardMarkup);
     }
 
 
@@ -170,46 +297,7 @@ public class BotActions{
                     : payload;
             Long groupId = Long.valueOf(groupIdToken);
 
-            List<Task> groupTasks = taskService.getTasksByGroupId(groupId);
-            List<Task> activeTasks = groupTasks.stream()
-                    .filter(task -> task.getStatus() != TaskStatus.completed)
-                    .collect(Collectors.toList());
-            List<Task> doneTasks = groupTasks.stream()
-                    .filter(task -> task.getStatus() == TaskStatus.completed)
-                    .collect(Collectors.toList());
-
-            ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup.builder()
-                    .resizeKeyboard(true)
-                    .oneTimeKeyboard(false)
-                    .selective(true)
-                    .build();
-            List<KeyboardRow> keyboard = new ArrayList<>();
-
-            KeyboardRow topRow = new KeyboardRow();
-            topRow.add(BotLabels.SHOW_MAIN_SCREEN.getLabel());
-            keyboard.add(topRow);
-
-            KeyboardRow actionsRow = new KeyboardRow();
-            actionsRow.add(BotLabels.SELECT_GROUP.getLabel());
-            keyboard.add(actionsRow);
-
-            for (Task task : activeTasks) {
-                KeyboardRow row = new KeyboardRow();
-                row.add(task.getTitle());
-                row.add(TASK_DONE_PREFIX + task.getId());
-                keyboard.add(row);
-            }
-
-            for (Task task : doneTasks) {
-                KeyboardRow row = new KeyboardRow();
-                row.add(task.getTitle());
-                row.add(TASK_UNDO_PREFIX + task.getId());
-                row.add(TASK_DELETE_PREFIX + task.getId());
-                keyboard.add(row);
-            }
-
-            keyboardMarkup.setKeyboard(keyboard);
-            BotHelper.sendMessageToTelegram(chatId, "Group tasks", telegramClient, keyboardMarkup);
+                renderGroupTasksMenu(groupId, "Group tasks");
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
             BotHelper.sendMessageToTelegram(chatId, "Could not load tasks for this group", telegramClient);
@@ -219,13 +307,22 @@ public class BotActions{
     }
 
     public void fnTaskDone() {
-        if (!requestText.startsWith(TASK_DONE_PREFIX) || exit)
+        if (exit)
+            return;
+
+        String actionToken = resolveTaskActionToken();
+        if (actionToken == null || !actionToken.startsWith(TASK_DONE_PREFIX))
             return;
 
         try {
-            Long taskId = Long.valueOf(requestText.substring(TASK_DONE_PREFIX.length()));
+            Long taskId = Long.valueOf(actionToken.substring(TASK_DONE_PREFIX.length()));
             taskService.updateTaskStatus(taskId, TaskStatus.completed);
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.ITEM_DONE.getMessage(), telegramClient);
+            Long groupId = lastViewedGroupByChat.get(chatId);
+            if (groupId != null) {
+                renderGroupTasksMenu(groupId, BotMessages.ITEM_DONE.getMessage());
+            } else {
+                renderAllTasksMenu(BotMessages.ITEM_DONE.getMessage());
+            }
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
         }
@@ -233,13 +330,22 @@ public class BotActions{
     }
 
     public void fnTaskUndo() {
-        if (!requestText.startsWith(TASK_UNDO_PREFIX) || exit)
+        if (exit)
+            return;
+
+        String actionToken = resolveTaskActionToken();
+        if (actionToken == null || !actionToken.startsWith(TASK_UNDO_PREFIX))
             return;
 
         try {
-            Long taskId = Long.valueOf(requestText.substring(TASK_UNDO_PREFIX.length()));
+            Long taskId = Long.valueOf(actionToken.substring(TASK_UNDO_PREFIX.length()));
             taskService.updateTaskStatus(taskId, TaskStatus.pending);
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.ITEM_UNDONE.getMessage(), telegramClient);
+            Long groupId = lastViewedGroupByChat.get(chatId);
+            if (groupId != null) {
+                renderGroupTasksMenu(groupId, BotMessages.ITEM_UNDONE.getMessage());
+            } else {
+                renderAllTasksMenu(BotMessages.ITEM_UNDONE.getMessage());
+            }
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
         }
@@ -247,13 +353,22 @@ public class BotActions{
     }
 
     public void fnTaskDelete() {
-        if (!requestText.startsWith(TASK_DELETE_PREFIX) || exit)
+        if (exit)
+            return;
+
+        String actionToken = resolveTaskActionToken();
+        if (actionToken == null || !actionToken.startsWith(TASK_DELETE_PREFIX))
             return;
 
         try {
-            Long taskId = Long.valueOf(requestText.substring(TASK_DELETE_PREFIX.length()));
+            Long taskId = Long.valueOf(actionToken.substring(TASK_DELETE_PREFIX.length()));
             taskService.deleteTask(taskId);
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.ITEM_DELETED.getMessage(), telegramClient);
+            Long groupId = lastViewedGroupByChat.get(chatId);
+            if (groupId != null) {
+                renderGroupTasksMenu(groupId, BotMessages.ITEM_DELETED.getMessage());
+            } else {
+                renderAllTasksMenu(BotMessages.ITEM_DELETED.getMessage());
+            }
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
         }
@@ -333,57 +448,7 @@ public class BotActions{
 				|| requestText.equals(BotLabels.LIST_ALL_ITEMS.getLabel())
 				|| requestText.equals(BotLabels.MY_TODO_LIST.getLabel())) || exit)
             return;
-        List<TaskResponseDTO> allTasks = taskService.getAllTasks();
-        ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup.builder()
-            .resizeKeyboard(true)
-            .oneTimeKeyboard(false)
-            .selective(true)
-            .build();
-
-        List<KeyboardRow> keyboard = new ArrayList<>();
-
-        // command back to main screen
-        KeyboardRow mainScreenRowTop = new KeyboardRow();
-        mainScreenRowTop.add(BotLabels.SHOW_MAIN_SCREEN.getLabel());
-        keyboard.add(mainScreenRowTop);
-
-        KeyboardRow firstRow = new KeyboardRow();
-        firstRow.add(BotLabels.ADD_NEW_ITEM.getLabel());
-        keyboard.add(firstRow);
-
-        Map<String, List<TaskResponseDTO>> tasksByGroup = new LinkedHashMap<>();
-        for (TaskResponseDTO task : allTasks) {
-            String groupName = task.getGroupName() != null ? task.getGroupName() : "No Group";
-            tasksByGroup.computeIfAbsent(groupName, key -> new ArrayList<>()).add(task);
-        }
-
-        for (Map.Entry<String, List<TaskResponseDTO>> groupEntry : tasksByGroup.entrySet()) {
-            KeyboardRow groupTitleRow = new KeyboardRow();
-            groupTitleRow.add("[" + groupEntry.getKey() + "]");
-            keyboard.add(groupTitleRow);
-
-            for (TaskResponseDTO task : groupEntry.getValue()) {
-                KeyboardRow taskRow = new KeyboardRow();
-                taskRow.add(task.getTitle());
-                String status = task.getStatus() != null ? task.getStatus() : TaskStatus.pending.name();
-                if (TaskStatus.completed.name().equals(status)) {
-                    taskRow.add(TASK_UNDO_PREFIX + task.getId());
-                    taskRow.add(TASK_DELETE_PREFIX + task.getId());
-                } else {
-                    taskRow.add(TASK_DONE_PREFIX + task.getId());
-                }
-                keyboard.add(taskRow);
-            }
-        }
-
-        // command back to main screen
-        KeyboardRow mainScreenRowBottom = new KeyboardRow();
-        mainScreenRowBottom.add(BotLabels.SHOW_MAIN_SCREEN.getLabel());
-        keyboard.add(mainScreenRowBottom);
-
-        keyboardMarkup.setKeyboard(keyboard);
-
-        BotHelper.sendMessageToTelegram(chatId, "Tasks grouped by group", telegramClient, keyboardMarkup);
+        renderAllTasksMenu("Tasks grouped by group");
         exit = true;
     }
 
@@ -451,7 +516,7 @@ public class BotActions{
         try {
             taskService.createTaskInGroup(selectedGroupId, title);
             pendingTaskGroupByChat.remove(chatId);
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.NEW_ITEM_ADDED.getMessage(), telegramClient);
+            renderGroupTasksMenu(selectedGroupId, BotMessages.NEW_ITEM_ADDED.getMessage());
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
             BotHelper.sendMessageToTelegram(chatId, "Could not create task in selected group", telegramClient);
