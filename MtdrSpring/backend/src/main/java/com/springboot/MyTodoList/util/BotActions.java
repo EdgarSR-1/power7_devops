@@ -27,6 +27,9 @@ public class BotActions{
 
     private static final Logger logger = LoggerFactory.getLogger(BotActions.class);
     private static final String GROUP_SELECTION_PREFIX = "GROUP::";
+    private static final String TASK_DONE_PREFIX = "TASKDONE::";
+    private static final String TASK_UNDO_PREFIX = "TASKUNDO::";
+    private static final String TASK_DELETE_PREFIX = "TASKDEL::";
     private static final Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
 
     String requestText;
@@ -193,14 +196,15 @@ public class BotActions{
             for (Task task : activeTasks) {
                 KeyboardRow row = new KeyboardRow();
                 row.add(task.getTitle());
-                row.add(task.getStatus().name());
+                row.add(TASK_DONE_PREFIX + task.getId());
                 keyboard.add(row);
             }
 
             for (Task task : doneTasks) {
                 KeyboardRow row = new KeyboardRow();
                 row.add(task.getTitle());
-                row.add(task.getStatus().name());
+                row.add(TASK_UNDO_PREFIX + task.getId());
+                row.add(TASK_DELETE_PREFIX + task.getId());
                 keyboard.add(row);
             }
 
@@ -214,8 +218,50 @@ public class BotActions{
         exit = true;
     }
 
+    public void fnTaskDone() {
+        if (!requestText.startsWith(TASK_DONE_PREFIX) || exit)
+            return;
+
+        try {
+            Long taskId = Long.valueOf(requestText.substring(TASK_DONE_PREFIX.length()));
+            taskService.updateTaskStatus(taskId, TaskStatus.completed);
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.ITEM_DONE.getMessage(), telegramClient);
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+        }
+        exit = true;
+    }
+
+    public void fnTaskUndo() {
+        if (!requestText.startsWith(TASK_UNDO_PREFIX) || exit)
+            return;
+
+        try {
+            Long taskId = Long.valueOf(requestText.substring(TASK_UNDO_PREFIX.length()));
+            taskService.updateTaskStatus(taskId, TaskStatus.pending);
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.ITEM_UNDONE.getMessage(), telegramClient);
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+        }
+        exit = true;
+    }
+
+    public void fnTaskDelete() {
+        if (!requestText.startsWith(TASK_DELETE_PREFIX) || exit)
+            return;
+
+        try {
+            Long taskId = Long.valueOf(requestText.substring(TASK_DELETE_PREFIX.length()));
+            taskService.deleteTask(taskId);
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.ITEM_DELETED.getMessage(), telegramClient);
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+        }
+        exit = true;
+    }
+
     public void fnDone() {
-        if (!(requestText.indexOf(BotLabels.DONE.getLabel()) != -1) || exit) 
+        if (exit || requestText == null || !requestText.matches("^\\d+-DONE$"))
             return;
             
         String done = requestText.substring(0, requestText.indexOf(BotLabels.DASH.getLabel()));
@@ -235,7 +281,7 @@ public class BotActions{
     }
 
     public void fnUndo() {
-        if (requestText.indexOf(BotLabels.UNDO.getLabel()) == -1 || exit)
+        if (exit || requestText == null || !requestText.matches("^\\d+-UNDO$"))
             return;
 
         String undo = requestText.substring(0,
@@ -256,7 +302,7 @@ public class BotActions{
     }
 
     public void fnDelete(){
-        if (requestText.indexOf(BotLabels.DELETE.getLabel()) == -1 || exit)
+        if (exit || requestText == null || !requestText.matches("^\\d+-DELETE$"))
             return;
 
         String delete = requestText.substring(0,
@@ -319,7 +365,13 @@ public class BotActions{
             for (TaskResponseDTO task : groupEntry.getValue()) {
                 KeyboardRow taskRow = new KeyboardRow();
                 taskRow.add(task.getTitle());
-                taskRow.add(task.getStatus() != null ? task.getStatus() : TaskStatus.pending.name());
+                String status = task.getStatus() != null ? task.getStatus() : TaskStatus.pending.name();
+                if (TaskStatus.completed.name().equals(status)) {
+                    taskRow.add(TASK_UNDO_PREFIX + task.getId());
+                    taskRow.add(TASK_DELETE_PREFIX + task.getId());
+                } else {
+                    taskRow.add(TASK_DONE_PREFIX + task.getId());
+                }
                 keyboard.add(taskRow);
             }
         }

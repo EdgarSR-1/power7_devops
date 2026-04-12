@@ -84,6 +84,17 @@ public class TaskService {
         return mapToResponseDTO(task);
     }
 
+    public TaskResponseDTO updateTaskStatus(Long taskId, TaskStatus status) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+        task.setStatus(status);
+        return mapToResponseDTO(taskRepository.save(task));
+    }
+
+    public void deleteTask(Long taskId) {
+        taskRepository.deleteById(taskId);
+    }
+
     public List<Task> getTasksByGroupId(Long groupId) {
         return taskRepository.findByTodoListGroupId(groupId);
     }

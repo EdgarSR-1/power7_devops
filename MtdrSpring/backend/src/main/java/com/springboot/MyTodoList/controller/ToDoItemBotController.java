@@ -86,6 +86,9 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 		actions.fnListAll();
 		actions.fnListGroups();
 		actions.fnListGroupTasks();
+		actions.fnTaskDone();
+		actions.fnTaskUndo();
+		actions.fnTaskDelete();
 		actions.fnSelectGroupForNewTask();
 		actions.fnCreateTaskFromSelectedGroup();
 		actions.fnCreateGroupPrompt();

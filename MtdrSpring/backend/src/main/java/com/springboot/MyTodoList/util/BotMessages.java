@@ -13,7 +13,7 @@ public enum BotMessages {
 	TYPE_NEW_TASK_TITLE("Now type the task title."),
 	TYPE_NEW_GROUP_NAME("Type the group name like this: NEWGROUP-My Team"),
 	NEW_ITEM_ADDED("New item added! Select /todolist to return to the list of todo items, or /start to go to the main screen."),
-	NEW_GROUP_ADDED("Group created successfully! Use List Tasks By Group to view its tasks."),
+	NEW_GROUP_ADDED("Group created successfully! Use List Group to view its tasks."),
 	BYE("Bye! Select /start to resume!");
 
 	private String message;
