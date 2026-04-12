@@ -8,16 +8,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "task_assignments",
        uniqueConstraints = @UniqueConstraint(columnNames = {"task_id","user_id"}))
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class TaskAssignment {
 
     @Id
@@ -31,4 +25,37 @@ public class TaskAssignment {
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
+
+    public TaskAssignment() {
+    }
+
+    public TaskAssignment(Long id, Task task, User user) {
+        this.id = id;
+        this.task = task;
+        this.user = user;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Task getTask() {
+        return task;
+    }
+
+    public void setTask(Task task) {
+        this.task = task;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
 }
