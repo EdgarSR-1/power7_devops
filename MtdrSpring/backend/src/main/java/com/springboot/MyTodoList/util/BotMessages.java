@@ -9,7 +9,9 @@ public enum BotMessages {
 	ITEM_UNDONE("Item undone! Select /todolist to return to the list of todo items, or /start to go to the main screen."), 
 	ITEM_DELETED("Item deleted! Select /todolist to return to the list of todo items, or /start to go to the main screen."),
 	TYPE_NEW_TODO_ITEM("Type a new todo item below and press the send button (blue arrow) on the rigth-hand side."),
+	TYPE_NEW_GROUP_NAME("Type the group name like this: NEWGROUP-My Team"),
 	NEW_ITEM_ADDED("New item added! Select /todolist to return to the list of todo items, or /start to go to the main screen."),
+	NEW_GROUP_ADDED("Group created successfully! Use List Tasks By Group to view its tasks."),
 	BYE("Bye! Select /start to resume!");
 
 	private String message;

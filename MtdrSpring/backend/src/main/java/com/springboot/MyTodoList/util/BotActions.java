@@ -81,10 +81,41 @@ public class BotActions{
         BotHelper.sendMessageToTelegram(chatId, BotMessages.HELLO_MYTODO_BOT.getMessage(), telegramClient,  ReplyKeyboardMarkup
             .builder()
             .keyboardRow(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(),BotLabels.ADD_NEW_ITEM.getLabel()))
-            .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel()))
+            .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel(), BotLabels.CREATE_GROUP.getLabel()))
             .keyboardRow(new KeyboardRow(BotLabels.SHOW_MAIN_SCREEN.getLabel(),BotLabels.HIDE_MAIN_SCREEN.getLabel()))
             .build()
         );
+        exit = true;
+    }
+
+    public void fnCreateGroupPrompt() {
+        if (!(requestText.equals(BotLabels.CREATE_GROUP.getLabel())) || exit)
+            return;
+
+        BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_GROUP_NAME.getMessage(), telegramClient);
+        exit = true;
+    }
+
+    public void fnCreateGroup() {
+        if (!requestText.startsWith(BotLabels.NEW_GROUP_PREFIX.getLabel()) || exit)
+            return;
+
+        try {
+            String groupName = requestText.substring(BotLabels.NEW_GROUP_PREFIX.getLabel().length()).trim();
+            if (groupName.isEmpty()) {
+                BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_GROUP_NAME.getMessage(), telegramClient);
+                exit = true;
+                return;
+            }
+
+            taskGroupService.createGroupForBot(groupName);
+
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.NEW_GROUP_ADDED.getMessage(), telegramClient);
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+            BotHelper.sendMessageToTelegram(chatId, "Could not create group", telegramClient);
+        }
+
         exit = true;
     }
 
