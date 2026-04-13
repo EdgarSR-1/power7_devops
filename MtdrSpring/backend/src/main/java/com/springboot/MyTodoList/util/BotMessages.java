@@ -5,10 +5,10 @@ public enum BotMessages {
 	HELLO_MYTODO_BOT(
 	"Hello! I'm MyTodoList Bot!\nType a new todo item below and press the send button (blue arrow), or select an option below:"),
 	BOT_REGISTERED_STARTED("Bot registered and started succesfully!"),
-	TYPE_NEW_USER_DATA("Type the user data like this: /registeruser Name email@example.com password"),
+	TYPE_NEW_USER_DATA("Type the user data like this: /registeruser Name email@example.com password phone"),
 	NEW_USER_ADDED("User created successfully! Select /start to go to the main screen."),
 	USER_ALREADY_EXISTS("A user with that email already exists."),
-	INVALID_USER_DATA("Invalid format. Use /registeruser Name email@example.com password"),
+	INVALID_USER_DATA("Invalid format. Use /registeruser Name email@example.com password phone"),
 	ITEM_DONE("Item done! Select /todolist to return to the list of todo items, or /start to go to the main screen."), 
 	ITEM_UNDONE("Item undone! Select /todolist to return to the list of todo items, or /start to go to the main screen."), 
 	ITEM_DELETED("Item deleted! Select /todolist to return to the list of todo items, or /start to go to the main screen."),

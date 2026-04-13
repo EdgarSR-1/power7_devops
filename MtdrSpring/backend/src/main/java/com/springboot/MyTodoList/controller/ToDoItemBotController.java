@@ -7,6 +7,7 @@ import com.springboot.MyTodoList.service.TaskService;
 import com.springboot.MyTodoList.service.ToDoItemService;
 import com.springboot.MyTodoList.service.UserService;
 import com.springboot.MyTodoList.util.BotActions;
+import com.springboot.MyTodoList.util.BotHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -65,16 +66,34 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 	@Override
 	public void consume(Update update) {
 
-		if (!update.hasMessage() || !update.getMessage().hasText()) return;
+		if (!update.hasMessage()) return;
+
+		long chatId = update.getMessage().getChatId();
+		Long telegramUserId = update.getMessage().getFrom() != null ? update.getMessage().getFrom().getId() : null;
+
+		if (update.getMessage().hasContact() && telegramUserId != null) {
+			boolean linked = userService.linkTelegramIdentityByPhone(
+					telegramUserId,
+					chatId,
+					update.getMessage().getContact().getPhoneNumber()
+			);
+
+			String linkMessage = linked
+					? "Phone linked with your Telegram account successfully."
+					: "Could not find a user with this phone. Register first with /registeruser Name email@example.com password phone";
+			BotHelper.sendMessageToTelegram(chatId, linkMessage, telegramClient);
+		}
+
+		if (!update.getMessage().hasText()) return;
 
 		
 
 		String messageTextFromTelegram = update.getMessage().getText();
-		long chatId = update.getMessage().getChatId();
 
 		BotActions actions = new BotActions(telegramClient, toDoItemService, deepSeekService, taskService, taskGroupService, userService);
 		actions.setRequestText(messageTextFromTelegram);
 		actions.setChatId(chatId);
+		actions.setTelegramUserId(telegramUserId);
 		if(actions.getTodoService()==null){
 			logger.info("todosvc error");
 			actions.setTodoService(toDoItemService);

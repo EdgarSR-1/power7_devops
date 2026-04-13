@@ -33,13 +33,14 @@ public class BotActions{
     private static final String TASK_DONE_PREFIX = "TASKDONE::";
     private static final String TASK_UNDO_PREFIX = "TASKUNDO::";
     private static final String TASK_DELETE_PREFIX = "TASKDEL::";
-    private static final Pattern REGISTER_USER_PATTERN = Pattern.compile("^/registeruser\\s+(.+?)\\s+([^\\s]+)\\s+(.+)$");
+    private static final Pattern REGISTER_USER_PATTERN = Pattern.compile("^/registeruser\\s+(.+?)\\s+([^\\s]+)\\s+([^\\s]+)\\s+([^\\s]+)$");
     private static final Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Map<String, String>> taskActionButtonsByChat = new ConcurrentHashMap<>();
 
     String requestText;
     long chatId;
+    Long telegramUserId;
     TelegramClient telegramClient;
     boolean exit;
 
@@ -65,6 +66,10 @@ public class BotActions{
 
     public void setChatId(long chId){
         chatId=chId;
+    }
+
+    public void setTelegramUserId(Long tgUserId) {
+        telegramUserId = tgUserId;
     }
 
     public void setTelegramClient(TelegramClient tc){
@@ -493,6 +498,9 @@ public class BotActions{
             user.setName(matcher.group(1));
             user.setEmail(matcher.group(2));
             user.setPassword(matcher.group(3));
+            user.setPhone(matcher.group(4));
+            user.setTelegramUserId(telegramUserId);
+            user.setTelegramChatId(chatId);
 
             userService.createUser(user);
             BotHelper.sendMessageToTelegram(chatId, BotMessages.NEW_USER_ADDED.getMessage(), telegramClient);
