@@ -5,6 +5,7 @@ import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.TaskGroupService;
 import com.springboot.MyTodoList.service.TaskService;
 import com.springboot.MyTodoList.service.ToDoItemService;
+import com.springboot.MyTodoList.service.UserService;
 import com.springboot.MyTodoList.util.BotActions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 	private DeepSeekService deepSeekService;
 	private TaskService taskService;
 	private TaskGroupService taskGroupService;
+	private UserService userService;
 	private final TelegramClient telegramClient;
 	
 	private final BotProps botProps;
@@ -45,13 +47,14 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
     }
 
 
-	public ToDoItemBotController(BotProps bp, ToDoItemService tsvc, DeepSeekService ds, TaskService taskSvc, TaskGroupService groupSvc) {
+	public ToDoItemBotController(BotProps bp, ToDoItemService tsvc, DeepSeekService ds, TaskService taskSvc, TaskGroupService groupSvc, UserService userSvc) {
 		this.botProps = bp;
 		telegramClient = new OkHttpTelegramClient(getBotToken());
 		toDoItemService = tsvc;
 		deepSeekService = ds;
 		taskService = taskSvc;
 		taskGroupService = groupSvc;
+		userService = userSvc;
 	}
 
 	@Override
@@ -69,7 +72,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 		String messageTextFromTelegram = update.getMessage().getText();
 		long chatId = update.getMessage().getChatId();
 
-		BotActions actions = new BotActions(telegramClient, toDoItemService, deepSeekService, taskService, taskGroupService);
+		BotActions actions = new BotActions(telegramClient, toDoItemService, deepSeekService, taskService, taskGroupService, userService);
 		actions.setRequestText(messageTextFromTelegram);
 		actions.setChatId(chatId);
 		if(actions.getTodoService()==null){
@@ -84,6 +87,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 		actions.fnDelete();
 		actions.fnHide();
 		actions.fnListAll();
+		actions.fnRegisterUser();
 		actions.fnListGroups();
 		actions.fnListGroupTasks();
 		actions.fnTaskDone();

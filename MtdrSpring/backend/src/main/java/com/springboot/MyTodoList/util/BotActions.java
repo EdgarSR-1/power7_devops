@@ -5,16 +5,19 @@ import com.springboot.MyTodoList.model.Task;
 import com.springboot.MyTodoList.model.TaskGroup;
 import com.springboot.MyTodoList.model.TaskStatus;
 import com.springboot.MyTodoList.model.ToDoItem;
+import com.springboot.MyTodoList.model.User;
 import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.TaskGroupService;
 import com.springboot.MyTodoList.service.TaskService;
 import com.springboot.MyTodoList.service.ToDoItemService;
+import com.springboot.MyTodoList.service.UserService;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -30,6 +33,7 @@ public class BotActions{
     private static final String TASK_DONE_PREFIX = "TASKDONE::";
     private static final String TASK_UNDO_PREFIX = "TASKUNDO::";
     private static final String TASK_DELETE_PREFIX = "TASKDEL::";
+    private static final Pattern REGISTER_USER_PATTERN = Pattern.compile("^/registeruser\\s+(.+?)\\s+([^\\s]+)\\s+(.+)$");
     private static final Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Map<String, String>> taskActionButtonsByChat = new ConcurrentHashMap<>();
@@ -43,13 +47,15 @@ public class BotActions{
     DeepSeekService deepSeekService;
     TaskService taskService;
     TaskGroupService taskGroupService;
+    UserService userService;
 
-    public BotActions(TelegramClient tc, ToDoItemService ts, DeepSeekService ds, TaskService tks, TaskGroupService tgs){
+    public BotActions(TelegramClient tc, ToDoItemService ts, DeepSeekService ds, TaskService tks, TaskGroupService tgs, UserService us){
         telegramClient = tc;
         todoService = ts;
         deepSeekService = ds;
         taskService = tks;
         taskGroupService = tgs;
+        userService = us;
         exit  = false;
     }
 
@@ -79,6 +85,14 @@ public class BotActions{
 
     public DeepSeekService getDeepSeekService(){
         return deepSeekService;
+    }
+
+    public void setUserService(UserService usvc){
+        userService = usvc;
+    }
+
+    public UserService getUserService(){
+        return userService;
     }
 
     private void clearTaskActionButtons() {
@@ -449,6 +463,50 @@ public class BotActions{
 				|| requestText.equals(BotLabels.MY_TODO_LIST.getLabel())) || exit)
             return;
         renderAllTasksMenu("Tasks grouped by group");
+        exit = true;
+    }
+
+    public void fnRegisterUser() {
+        if (requestText == null || exit) {
+            return;
+        }
+
+        if (requestText.equals(BotCommands.REGISTER_USER.getCommand())) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_USER_DATA.getMessage(), telegramClient);
+            exit = true;
+            return;
+        }
+
+        if (!requestText.startsWith(BotCommands.REGISTER_USER.getCommand())) {
+            return;
+        }
+
+        Matcher matcher = REGISTER_USER_PATTERN.matcher(requestText.trim());
+        if (!matcher.matches()) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_USER_DATA.getMessage(), telegramClient);
+            exit = true;
+            return;
+        }
+
+        try {
+            User user = new User();
+            user.setName(matcher.group(1));
+            user.setEmail(matcher.group(2));
+            user.setPassword(matcher.group(3));
+
+            userService.createUser(user);
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.NEW_USER_ADDED.getMessage(), telegramClient);
+        } catch (RuntimeException e) {
+            logger.error(e.getLocalizedMessage(), e);
+            String message = "Email already exists".equals(e.getMessage())
+                    ? BotMessages.USER_ALREADY_EXISTS.getMessage()
+                    : e.getMessage();
+            BotHelper.sendMessageToTelegram(chatId, message, telegramClient);
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_USER_DATA.getMessage(), telegramClient);
+        }
+
         exit = true;
     }
 

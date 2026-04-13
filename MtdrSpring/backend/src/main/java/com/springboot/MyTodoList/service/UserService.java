@@ -5,6 +5,7 @@ import com.springboot.MyTodoList.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class UserService {
@@ -20,9 +21,29 @@ public class UserService {
     }
 
     public User createUser(User user) {
-        if (repo.existsByEmail(user.getEmail())) {
+        if (user == null) {
+            throw new IllegalArgumentException("User data is required");
+        }
+
+        String name = normalizeRequired(user.getName(), "Name is required");
+        String email = normalizeRequired(user.getEmail(), "Email is required").toLowerCase(Locale.ROOT);
+        String password = normalizeRequired(user.getPassword(), "Password is required");
+
+        if (repo.existsByEmail(email)) {
             throw new RuntimeException("Email already exists");
         }
+
+        user.setName(name);
+        user.setEmail(email);
+        user.setPassword(password);
         return repo.save(user);
+    }
+
+    private String normalizeRequired(String value, String message) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new IllegalArgumentException(message);
+        }
+
+        return value.trim();
     }
 }
