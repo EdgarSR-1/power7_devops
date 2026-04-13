@@ -1,48 +1,64 @@
 package com.springboot.MyTodoList.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.*;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "group_members",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"group_id","user_id"}))
+@Table(
+    name = "group_members",
+    uniqueConstraints = @UniqueConstraint(columnNames = {"group_id", "user_id"})
+)
 public class GroupMember {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // FK to taskgroups
     @ManyToOne
-    @JoinColumn(name = "group_id")
+    @JoinColumn(name = "group_id", nullable = false)
     private TaskGroup group;
 
+    // FK to users
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    private String role;
+    // FK to roles table
+    @ManyToOne
+    @JoinColumn(name = "role_id", nullable = false)
+    private Role role;
 
-    @Column(name = "joined_at")
+    // Plain text role 
+    @Column(name = "role", length = 255)
+    private String roleName;
+
+    // Timestamp handled by DB
+    @Column(name = "joined_at", insertable = false, updatable = false)
     private LocalDateTime joinedAt;
 
     public GroupMember() {
     }
 
-    public GroupMember(Long id, TaskGroup group, User user, String role, LocalDateTime joinedAt) {
+    public GroupMember(Long id, TaskGroup group, User user, Role role, String roleName, LocalDateTime joinedAt) {
         this.id = id;
         this.group = group;
         this.user = user;
         this.role = role;
+        this.roleName = roleName;
         this.joinedAt = joinedAt;
     }
+
+    @PrePersist
+    public void prePersist() {
+        // keep roleName in sync automatically
+        if (this.role != null && (this.roleName == null || this.roleName.isBlank())) {
+            this.roleName = this.role.getName();
+        }
+    }
+
+    // getters & setters
 
     public Long getId() {
         return id;
@@ -68,12 +84,20 @@ public class GroupMember {
         this.user = user;
     }
 
-    public String getRole() {
+    public Role getRole() {
         return role;
     }
 
-    public void setRole(String role) {
+    public void setRole(Role role) {
         this.role = role;
+    }
+
+    public String getRoleName() {
+        return roleName;
+    }
+
+    public void setRoleName(String roleName) {
+        this.roleName = roleName;
     }
 
     public LocalDateTime getJoinedAt() {
