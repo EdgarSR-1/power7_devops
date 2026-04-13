@@ -1,24 +1,14 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-export IMAGE_NAME=todolistapp-springboot
-export IMAGE_VERSION=0.1
+set -euo pipefail
 
+container_name="agilecontainer"
+image_name="agileimage:0.1"
 
-if [ -z "$DOCKER_REGISTRY" ]; then
-    export DOCKER_REGISTRY=$(state_get DOCKER_REGISTRY)
-    echo "DOCKER_REGISTRY set."
-fi
-if [ -z "$DOCKER_REGISTRY" ]; then
-    echo "Error: DOCKER_REGISTRY env variable needs to be set!"
-    exit 1
-fi
+docker stop "$container_name" 2>/dev/null || true
+docker rm -f "$container_name" 2>/dev/null || true
+docker rmi "$image_name" 2>/dev/null || true
 
-export IMAGE=${DOCKER_REGISTRY}/${IMAGE_NAME}:${IMAGE_VERSION}
-
-mvn clean package spring-boot:repackage
-docker build -f Dockerfile -t $IMAGE .
-
-docker push $IMAGE
-if [  $? -eq 0 ]; then
-    docker rmi "$IMAGE" #local
-fi
+mvn clean verify
+docker build -f Dockerfile --platform linux/amd64 -t "$image_name" .
+docker run --name "$container_name" --volume "${PWD}/target:/tmp/target:rw" -p 8080:8080 -d "$image_name"

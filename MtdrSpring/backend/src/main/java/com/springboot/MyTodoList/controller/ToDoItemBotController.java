@@ -1,8 +1,10 @@
 package com.springboot.MyTodoList.controller;
 
 import com.springboot.MyTodoList.config.BotProps;
-import com.springboot.MyTodoList.services.DeepSeekService;
-import com.springboot.MyTodoList.services.ToDoItemService;
+import com.springboot.MyTodoList.service.DeepSeekService;
+import com.springboot.MyTodoList.service.TaskGroupService;
+import com.springboot.MyTodoList.service.TaskService;
+import com.springboot.MyTodoList.service.ToDoItemService;
 import com.springboot.MyTodoList.util.BotActions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +25,8 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 	private static final Logger logger = LoggerFactory.getLogger(ToDoItemBotController.class);
 	private ToDoItemService toDoItemService;
 	private DeepSeekService deepSeekService;
+	private TaskService taskService;
+	private TaskGroupService taskGroupService;
 	private final TelegramClient telegramClient;
 	
 	private final BotProps botProps;
@@ -41,11 +45,13 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
     }
 
 
-	public ToDoItemBotController( BotProps bp, ToDoItemService tsvc, DeepSeekService ds) {
+	public ToDoItemBotController(BotProps bp, ToDoItemService tsvc, DeepSeekService ds, TaskService taskSvc, TaskGroupService groupSvc) {
 		this.botProps = bp;
 		telegramClient = new OkHttpTelegramClient(getBotToken());
 		toDoItemService = tsvc;
 		deepSeekService = ds;
+		taskService = taskSvc;
+		taskGroupService = groupSvc;
 	}
 
 	@Override
@@ -63,7 +69,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 		String messageTextFromTelegram = update.getMessage().getText();
 		long chatId = update.getMessage().getChatId();
 
-		BotActions actions =  new BotActions(telegramClient,toDoItemService,deepSeekService);
+		BotActions actions = new BotActions(telegramClient, toDoItemService, deepSeekService, taskService, taskGroupService);
 		actions.setRequestText(messageTextFromTelegram);
 		actions.setChatId(chatId);
 		if(actions.getTodoService()==null){
@@ -78,6 +84,15 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 		actions.fnDelete();
 		actions.fnHide();
 		actions.fnListAll();
+		actions.fnListGroups();
+		actions.fnListGroupTasks();
+		actions.fnTaskDone();
+		actions.fnTaskUndo();
+		actions.fnTaskDelete();
+		actions.fnSelectGroupForNewTask();
+		actions.fnCreateTaskFromSelectedGroup();
+		actions.fnCreateGroupPrompt();
+		actions.fnCreateGroup();
 		actions.fnAddItem();
 		actions.fnLLM();
 		actions.fnElse();

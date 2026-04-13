@@ -7,4 +7,5 @@ import java.util.List;
 public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByTodoListId(Long listId);
     List<Task> findByCreatedById(Long userId);
+    List<Task> findByTodoListGroupId(Long groupId);
 }

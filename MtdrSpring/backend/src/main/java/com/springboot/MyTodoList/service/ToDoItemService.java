@@ -1,18 +1,20 @@
-package com.springboot.MyTodoList.services;
+package com.springboot.MyTodoList.service;
 
 import com.springboot.MyTodoList.model.ToDoItem;
 import com.springboot.MyTodoList.repository.ToDoItemRepository;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 public class ToDoItemService {
 
     private final ToDoItemRepository repository;
+
+    public ToDoItemService(ToDoItemRepository repository) {
+        this.repository = repository;
+    }
 
     public List<ToDoItem> findAll() {
         return repository.findAll();
