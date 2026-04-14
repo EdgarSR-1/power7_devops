@@ -8,6 +8,7 @@ import com.springboot.MyTodoList.service.ToDoItemService;
 import com.springboot.MyTodoList.service.UserService;
 import com.springboot.MyTodoList.util.BotActions;
 import com.springboot.MyTodoList.util.BotHelper;
+import com.springboot.MyTodoList.util.BotMessages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,8 +22,13 @@ import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateC
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import java.util.Optional;
+import java.util.regex.Pattern;
+
 @Component
 public class ToDoItemBotController  implements SpringLongPollingBot, LongPollingSingleThreadUpdateConsumer {
+	private static final Pattern REGISTER_USER_COMMAND_PATTERN = Pattern.compile("^/?registeruser(?:@\\w+)?(?:\\s+.*)?$", Pattern.CASE_INSENSITIVE);
+	private static final Pattern START_COMMAND_PATTERN = Pattern.compile("^/?start(?:@\\w+)?\\s*$", Pattern.CASE_INSENSITIVE);
 
 	private static final Logger logger = LoggerFactory.getLogger(ToDoItemBotController.class);
 	private ToDoItemService toDoItemService;
@@ -89,11 +95,28 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 		
 
 		String messageTextFromTelegram = update.getMessage().getText();
+		String normalizedRequest = messageTextFromTelegram != null ? messageTextFromTelegram.trim() : "";
+
+		Optional<com.springboot.MyTodoList.model.User> requesterUser = userService.findByTelegramUserId(telegramUserId);
+		boolean isRegisterFlow = REGISTER_USER_COMMAND_PATTERN.matcher(normalizedRequest).matches();
+		boolean isStartFlow = START_COMMAND_PATTERN.matcher(normalizedRequest).matches();
+
+		logger.info("bot_request chatId={} telegramUserId={} text='{}' requesterFound={}",
+				chatId,
+				telegramUserId,
+				normalizedRequest,
+				requesterUser.isPresent());
+
+		if (requesterUser.isEmpty() && !isRegisterFlow && !isStartFlow) {
+			BotHelper.sendMessageToTelegram(chatId, BotMessages.USER_NOT_REGISTERED.getMessage(), telegramClient);
+			return;
+		}
 
 		BotActions actions = new BotActions(telegramClient, toDoItemService, deepSeekService, taskService, taskGroupService, userService);
 		actions.setRequestText(messageTextFromTelegram);
 		actions.setChatId(chatId);
 		actions.setTelegramUserId(telegramUserId);
+		requesterUser.ifPresent(actions::setRequesterUser);
 		if(actions.getTodoService()==null){
 			logger.info("todosvc error");
 			actions.setTodoService(toDoItemService);

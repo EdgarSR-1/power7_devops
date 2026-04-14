@@ -6,6 +6,7 @@ import com.springboot.MyTodoList.model.TaskGroup;
 import com.springboot.MyTodoList.model.TaskStatus;
 import com.springboot.MyTodoList.model.ToDoItem;
 import com.springboot.MyTodoList.model.User;
+import com.springboot.MyTodoList.model.UserType;
 import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.TaskGroupService;
 import com.springboot.MyTodoList.service.TaskService;
@@ -48,6 +49,7 @@ public class BotActions{
     String requestText;
     long chatId;
     Long telegramUserId;
+    User requesterUser;
     TelegramClient telegramClient;
     boolean exit;
 
@@ -77,6 +79,10 @@ public class BotActions{
 
     public void setTelegramUserId(Long tgUserId) {
         telegramUserId = tgUserId;
+    }
+
+    public void setRequesterUser(User user) {
+        requesterUser = user;
     }
 
     public void setTelegramClient(TelegramClient tc){
@@ -239,7 +245,29 @@ public class BotActions{
         if (!(requestText.equals(BotCommands.START_COMMAND.getCommand()) || requestText.equals(BotLabels.SHOW_MAIN_SCREEN.getLabel())) || exit) 
             return;
 
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.HELLO_MYTODO_BOT.getMessage(), telegramClient,  ReplyKeyboardMarkup
+        String roleMessage = "";
+        String userIdText = "N/A";
+        String userTypeText = "UNREGISTERED";
+        if (requesterUser != null && requesterUser.getUserType() != null) {
+            roleMessage = requesterUser.getUserType() == UserType.DEVELOPER
+                    ? "\n\n" + BotMessages.ROLE_DEVELOPER.getMessage()
+                    : "\n\n" + BotMessages.ROLE_NORMAL.getMessage();
+            if (requesterUser.getId() != null) {
+                userIdText = String.valueOf(requesterUser.getId());
+            }
+            userTypeText = requesterUser.getUserType().name();
+        }
+
+        String identityDebug = "\n\nDebug Identity\n"
+                + "telegramUserId: " + (telegramUserId != null ? telegramUserId : "N/A") + "\n"
+                + "dbUserId: " + userIdText + "\n"
+                + "userType: " + userTypeText;
+
+        if (requesterUser == null) {
+            identityDebug += "\n" + BotMessages.USER_NOT_REGISTERED.getMessage();
+        }
+
+        BotHelper.sendMessageToTelegram(chatId, BotMessages.HELLO_MYTODO_BOT.getMessage() + roleMessage + identityDebug, telegramClient,  ReplyKeyboardMarkup
             .builder()
             .keyboardRow(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(),BotLabels.ADD_NEW_ITEM.getLabel()))
             .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel(), BotLabels.CREATE_GROUP.getLabel()))
@@ -512,6 +540,9 @@ public class BotActions{
             user.setPhone(matcher.group(4));
             user.setTelegramUserId(telegramUserId);
             user.setTelegramChatId(chatId);
+            if (requesterUser != null && requesterUser.getUserType() != null) {
+                user.setUserType(requesterUser.getUserType());
+            }
 
             userService.createUser(user);
             BotHelper.sendMessageToTelegram(chatId, BotMessages.NEW_USER_ADDED.getMessage(), telegramClient);

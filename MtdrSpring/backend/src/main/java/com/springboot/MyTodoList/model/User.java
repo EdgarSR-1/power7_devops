@@ -30,10 +30,21 @@ public class User {
     @Column(name = "TELEGRAM_CHAT_ID")
     private Long telegramChatId;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "USER_TYPE", length = 20)
+    private UserType userType;
+
     @Column(name = "CREATED_AT", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
     public User() {
+    }
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.userType == null) {
+            this.userType = UserType.NORMAL;
+        }
     }
 
     public Long getId() {
@@ -86,6 +97,14 @@ public class User {
 
     public void setTelegramChatId(Long telegramChatId) {
         this.telegramChatId = telegramChatId;
+    }
+
+    public UserType getUserType() {
+        return userType;
+    }
+
+    public void setUserType(UserType userType) {
+        this.userType = userType;
     }
 
     public LocalDateTime getCreatedAt() {
