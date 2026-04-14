@@ -1,3 +1,5 @@
 **/node_modules/**
 **/build/**
 **/target/**
+# Database wallet / credentials
+backend/wallet/
