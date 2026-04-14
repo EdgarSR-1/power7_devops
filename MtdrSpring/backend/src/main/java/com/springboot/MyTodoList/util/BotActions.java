@@ -42,6 +42,10 @@ public class BotActions{
                 "^/?registeruser(?:@\\w+)?\\s*$",
             Pattern.CASE_INSENSITIVE
         );
+                private static final Pattern START_DEBUG_PATTERN = Pattern.compile(
+                        "^/?start(?:@\\w+)?\\s+-d\\s*$",
+                    Pattern.CASE_INSENSITIVE
+                );
     private static final Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Map<String, String>> taskActionButtonsByChat = new ConcurrentHashMap<>();
@@ -242,8 +246,19 @@ public class BotActions{
     
 
     public void fnStart() {
-        if (!(requestText.equals(BotCommands.START_COMMAND.getCommand()) || requestText.equals(BotLabels.SHOW_MAIN_SCREEN.getLabel())) || exit) 
+        boolean isStartCommand = requestText != null && (
+                requestText.equals(BotCommands.START_COMMAND.getCommand())
+                        || requestText.equals(BotLabels.SHOW_MAIN_SCREEN.getLabel())
+                        || START_DEBUG_PATTERN.matcher(requestText.trim()).matches()
+        );
+
+        if (!isStartCommand || exit)
             return;
+
+        String welcomeMessage = BotMessages.HELLO_MYTODO_BOT.getMessage();
+        if (requesterUser != null && requesterUser.getName() != null && !requesterUser.getName().isBlank()) {
+            welcomeMessage = "Hello, " + requesterUser.getName().trim() + "!\n" + welcomeMessage;
+        }
 
         String roleMessage = "";
         String userIdText = "N/A";
@@ -258,16 +273,19 @@ public class BotActions{
             userTypeText = requesterUser.getUserType().name();
         }
 
-        String identityDebug = "\n\nDebug Identity\n"
-                + "telegramUserId: " + (telegramUserId != null ? telegramUserId : "N/A") + "\n"
-                + "dbUserId: " + userIdText + "\n"
-                + "userType: " + userTypeText;
+        String identityDebug = "";
+        if (START_DEBUG_PATTERN.matcher(requestText.trim()).matches()) {
+            identityDebug = "\n\nDebug Identity\n"
+                    + "telegramUserId: " + (telegramUserId != null ? telegramUserId : "N/A") + "\n"
+                    + "dbUserId: " + userIdText + "\n"
+                    + "userType: " + userTypeText;
 
-        if (requesterUser == null) {
-            identityDebug += "\n" + BotMessages.USER_NOT_REGISTERED.getMessage();
+            if (requesterUser == null) {
+                identityDebug += "\n" + BotMessages.USER_NOT_REGISTERED.getMessage();
+            }
         }
 
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.HELLO_MYTODO_BOT.getMessage() + roleMessage + identityDebug, telegramClient,  ReplyKeyboardMarkup
+        BotHelper.sendMessageToTelegram(chatId, welcomeMessage + roleMessage + identityDebug, telegramClient,  ReplyKeyboardMarkup
             .builder()
             .keyboardRow(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(),BotLabels.ADD_NEW_ITEM.getLabel()))
             .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel(), BotLabels.CREATE_GROUP.getLabel()))

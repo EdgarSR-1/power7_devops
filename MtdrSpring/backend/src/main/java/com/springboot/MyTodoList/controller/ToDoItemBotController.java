@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 @Component
 public class ToDoItemBotController  implements SpringLongPollingBot, LongPollingSingleThreadUpdateConsumer {
 	private static final Pattern REGISTER_USER_COMMAND_PATTERN = Pattern.compile("^/?registeruser(?:@\\w+)?(?:\\s+.*)?$", Pattern.CASE_INSENSITIVE);
-	private static final Pattern START_COMMAND_PATTERN = Pattern.compile("^/?start(?:@\\w+)?\\s*$", Pattern.CASE_INSENSITIVE);
+	private static final Pattern START_COMMAND_PATTERN = Pattern.compile("^/?start(?:@\\w+)?(?:\\s+-d)?\\s*$", Pattern.CASE_INSENSITIVE);
 
 	private static final Logger logger = LoggerFactory.getLogger(ToDoItemBotController.class);
 	private ToDoItemService toDoItemService;

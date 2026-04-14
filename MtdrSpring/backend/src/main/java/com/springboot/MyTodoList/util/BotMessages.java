@@ -3,7 +3,7 @@ package com.springboot.MyTodoList.util;
 public enum BotMessages {
 	
 	HELLO_MYTODO_BOT(
-	"Hello! I'm MyTodoList Bot!\nType a new todo item below and press the send button (blue arrow), or select an option below:"),
+	"Hello! I'm PowerSeven Bot!\nType a new todo item below and press the send button (blue arrow), or select an option below:"),
 	BOT_REGISTERED_STARTED("Bot registered and started succesfully!"),
 	TYPE_NEW_USER_DATA("Type the user data like this: /registeruser Name email@example.com password phone"),
 	NEW_USER_ADDED("User created successfully! Select /start to go to the main screen."),
