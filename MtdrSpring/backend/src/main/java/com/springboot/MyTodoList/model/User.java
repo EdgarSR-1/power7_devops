@@ -76,7 +76,7 @@ public class User {
     }
 
     public String getPhone() {
-        return phone;
+    return phone;
     }
 
     public void setPhone(String phone) {
