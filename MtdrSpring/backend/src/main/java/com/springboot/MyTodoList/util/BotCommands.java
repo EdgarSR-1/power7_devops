@@ -7,6 +7,9 @@ public enum BotCommands {
 	TODO_LIST("/todolist"),
 	REGISTER_USER("/registeruser"),
 	ADD_ITEM("/additem"),
+	ADD_TASK("/addtask"),
+	START_TASK("/starttask"),
+	COMPLETE_TASK("/completetask"),
 	LLM_REQ("/llm");
 
 	private String command;

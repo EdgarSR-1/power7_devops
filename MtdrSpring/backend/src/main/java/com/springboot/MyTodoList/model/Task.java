@@ -34,6 +34,12 @@ public class Task {
     @Column(name = "due_date")
     private LocalDateTime dueDate;
 
+    @Column(name = "estimated_hours", precision = 5, scale = 2)
+    private Float estimatedHours;
+
+    @Column(name = "actual_hours", precision = 5, scale = 2)
+    private Float actualHours;
+
     // FK -> users(id), nullable
     @ManyToOne
     @JoinColumn(name = "created_by")
@@ -68,6 +74,8 @@ public class Task {
         this.dueDate = dueDate;
         this.createdBy = createdBy;
         this.createdAt = createdAt;
+        this.estimatedHours = null;
+        this.actualHours = null;
     }
 
     public Long getId() {
@@ -140,5 +148,21 @@ public class Task {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Float getEstimatedHours() {
+        return estimatedHours;
+    }
+
+    public void setEstimatedHours(Float estimatedHours) {
+        this.estimatedHours = estimatedHours;
+    }
+
+    public Float getActualHours() {
+        return actualHours;
+    }
+
+    public void setActualHours(Float actualHours) {
+        this.actualHours = actualHours;
     }
 }

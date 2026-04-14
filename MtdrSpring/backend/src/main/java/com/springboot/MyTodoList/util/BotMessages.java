@@ -21,6 +21,14 @@ public enum BotMessages {
 	TYPE_NEW_GROUP_NAME("Type the group name like this: NEWGROUP-My Team"),
 	NEW_ITEM_ADDED("New item added! Select /todolist to return to the list of todo items, or /start to go to the main screen."),
 	NEW_GROUP_ADDED("Group created successfully! Use List Group to view its tasks."),
+	ADD_TASK_FORMAT("Format: /addtask Título de tarea, horas estimadas\nExample: /addtask Implementar login 3"),
+	TASK_ADDED_WITH_HOURS("Task created with estimated hours: %s! Developer: %s"),
+	START_TASK_FORMAT("Format: /starttask [task_id]\nExample: /starttask 42"),
+	TASK_STARTED("Task %s marked as IN_PROGRESS!"),
+	COMPLETE_TASK_FORMAT("Format: /completetask [task_id] [actual_hours]\nExample: /completetask 42 2.5"),
+	TASK_COMPLETED("Task %s marked as COMPLETED! Time logged: %s hours"),
+	TASK_NOT_FOUND("Task not found. Check task ID."),
+	INVALID_HOURS("Invalid hours format. Use decimal (e.g., 2.5)"),
 	BYE("Bye! Select /start to resume!");
 
 	private String message;
