@@ -33,7 +33,14 @@ public class BotActions{
     private static final String TASK_DONE_PREFIX = "TASKDONE::";
     private static final String TASK_UNDO_PREFIX = "TASKUNDO::";
     private static final String TASK_DELETE_PREFIX = "TASKDEL::";
-    private static final Pattern REGISTER_USER_PATTERN = Pattern.compile("^/registeruser\\s+(.+?)\\s+([^\\s]+)\\s+([^\\s]+)\\s+([^\\s]+)$");
+            private static final Pattern REGISTER_USER_PATTERN = Pattern.compile(
+                "^/?registeruser(?:@\\w+)?\\s+(.+?)\\s+([^\\s]+)\\s+([^\\s]+)\\s+([^\\s]+)\\s*$",
+            Pattern.CASE_INSENSITIVE
+        );
+        private static final Pattern REGISTER_USER_HELP_PATTERN = Pattern.compile(
+                "^/?registeruser(?:@\\w+)?\\s*$",
+            Pattern.CASE_INSENSITIVE
+        );
     private static final Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Map<String, String>> taskActionButtonsByChat = new ConcurrentHashMap<>();
@@ -476,17 +483,21 @@ public class BotActions{
             return;
         }
 
-        if (requestText.equals(BotCommands.REGISTER_USER.getCommand())) {
+        String normalizedRequest = requestText.trim();
+
+        if (REGISTER_USER_HELP_PATTERN.matcher(normalizedRequest).matches()) {
             BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_USER_DATA.getMessage(), telegramClient);
             exit = true;
             return;
         }
 
-        if (!requestText.startsWith(BotCommands.REGISTER_USER.getCommand())) {
+        String normalizedLower = normalizedRequest.toLowerCase();
+        if (!(normalizedLower.startsWith(BotCommands.REGISTER_USER.getCommand())
+            || normalizedLower.startsWith(BotCommands.REGISTER_USER.getCommand().substring(1)))) {
             return;
         }
 
-        Matcher matcher = REGISTER_USER_PATTERN.matcher(requestText.trim());
+        Matcher matcher = REGISTER_USER_PATTERN.matcher(normalizedRequest);
         if (!matcher.matches()) {
             BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_USER_DATA.getMessage(), telegramClient);
             exit = true;
