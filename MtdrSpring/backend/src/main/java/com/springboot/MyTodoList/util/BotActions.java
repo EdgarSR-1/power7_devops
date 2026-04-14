@@ -5,16 +5,20 @@ import com.springboot.MyTodoList.model.Task;
 import com.springboot.MyTodoList.model.TaskGroup;
 import com.springboot.MyTodoList.model.TaskStatus;
 import com.springboot.MyTodoList.model.ToDoItem;
+import com.springboot.MyTodoList.model.User;
+import com.springboot.MyTodoList.model.UserType;
 import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.TaskGroupService;
 import com.springboot.MyTodoList.service.TaskService;
 import com.springboot.MyTodoList.service.ToDoItemService;
+import com.springboot.MyTodoList.service.UserService;
 
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -30,12 +34,26 @@ public class BotActions{
     private static final String TASK_DONE_PREFIX = "TASKDONE::";
     private static final String TASK_UNDO_PREFIX = "TASKUNDO::";
     private static final String TASK_DELETE_PREFIX = "TASKDEL::";
+            private static final Pattern REGISTER_USER_PATTERN = Pattern.compile(
+                "^/?registeruser(?:@\\w+)?\\s+(.+?)\\s+([^\\s]+)\\s+([^\\s]+)\\s+([^\\s]+)\\s*$",
+            Pattern.CASE_INSENSITIVE
+        );
+        private static final Pattern REGISTER_USER_HELP_PATTERN = Pattern.compile(
+                "^/?registeruser(?:@\\w+)?\\s*$",
+            Pattern.CASE_INSENSITIVE
+        );
+                private static final Pattern START_DEBUG_PATTERN = Pattern.compile(
+                        "^/?start(?:@\\w+)?\\s+-d\\s*$",
+                    Pattern.CASE_INSENSITIVE
+                );
     private static final Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Map<String, String>> taskActionButtonsByChat = new ConcurrentHashMap<>();
 
     String requestText;
     long chatId;
+    Long telegramUserId;
+    User requesterUser;
     TelegramClient telegramClient;
     boolean exit;
 
@@ -43,13 +61,15 @@ public class BotActions{
     DeepSeekService deepSeekService;
     TaskService taskService;
     TaskGroupService taskGroupService;
+    UserService userService;
 
-    public BotActions(TelegramClient tc, ToDoItemService ts, DeepSeekService ds, TaskService tks, TaskGroupService tgs){
+    public BotActions(TelegramClient tc, ToDoItemService ts, DeepSeekService ds, TaskService tks, TaskGroupService tgs, UserService us){
         telegramClient = tc;
         todoService = ts;
         deepSeekService = ds;
         taskService = tks;
         taskGroupService = tgs;
+        userService = us;
         exit  = false;
     }
 
@@ -59,6 +79,14 @@ public class BotActions{
 
     public void setChatId(long chId){
         chatId=chId;
+    }
+
+    public void setTelegramUserId(Long tgUserId) {
+        telegramUserId = tgUserId;
+    }
+
+    public void setRequesterUser(User user) {
+        requesterUser = user;
     }
 
     public void setTelegramClient(TelegramClient tc){
@@ -79,6 +107,14 @@ public class BotActions{
 
     public DeepSeekService getDeepSeekService(){
         return deepSeekService;
+    }
+
+    public void setUserService(UserService usvc){
+        userService = usvc;
+    }
+
+    public UserService getUserService(){
+        return userService;
     }
 
     private void clearTaskActionButtons() {
@@ -210,10 +246,46 @@ public class BotActions{
     
 
     public void fnStart() {
-        if (!(requestText.equals(BotCommands.START_COMMAND.getCommand()) || requestText.equals(BotLabels.SHOW_MAIN_SCREEN.getLabel())) || exit) 
+        boolean isStartCommand = requestText != null && (
+                requestText.equals(BotCommands.START_COMMAND.getCommand())
+                        || requestText.equals(BotLabels.SHOW_MAIN_SCREEN.getLabel())
+                        || START_DEBUG_PATTERN.matcher(requestText.trim()).matches()
+        );
+
+        if (!isStartCommand || exit)
             return;
 
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.HELLO_MYTODO_BOT.getMessage(), telegramClient,  ReplyKeyboardMarkup
+        String welcomeMessage = BotMessages.HELLO_MYTODO_BOT.getMessage();
+        if (requesterUser != null && requesterUser.getName() != null && !requesterUser.getName().isBlank()) {
+            welcomeMessage = "Hello, " + requesterUser.getName().trim() + "!\n" + welcomeMessage;
+        }
+
+        String roleMessage = "";
+        String userIdText = "N/A";
+        String userTypeText = "UNREGISTERED";
+        if (requesterUser != null && requesterUser.getUserType() != null) {
+            roleMessage = requesterUser.getUserType() == UserType.DEVELOPER
+                    ? "\n\n" + BotMessages.ROLE_DEVELOPER.getMessage()
+                    : "\n\n" + BotMessages.ROLE_NORMAL.getMessage();
+            if (requesterUser.getId() != null) {
+                userIdText = String.valueOf(requesterUser.getId());
+            }
+            userTypeText = requesterUser.getUserType().name();
+        }
+
+        String identityDebug = "";
+        if (START_DEBUG_PATTERN.matcher(requestText.trim()).matches()) {
+            identityDebug = "\n\nDebug Identity\n"
+                    + "telegramUserId: " + (telegramUserId != null ? telegramUserId : "N/A") + "\n"
+                    + "dbUserId: " + userIdText + "\n"
+                    + "userType: " + userTypeText;
+
+            if (requesterUser == null) {
+                identityDebug += "\n" + BotMessages.USER_NOT_REGISTERED.getMessage();
+            }
+        }
+
+        BotHelper.sendMessageToTelegram(chatId, welcomeMessage + roleMessage + identityDebug, telegramClient,  ReplyKeyboardMarkup
             .builder()
             .keyboardRow(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(),BotLabels.ADD_NEW_ITEM.getLabel()))
             .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel(), BotLabels.CREATE_GROUP.getLabel()))
@@ -449,6 +521,60 @@ public class BotActions{
 				|| requestText.equals(BotLabels.MY_TODO_LIST.getLabel())) || exit)
             return;
         renderAllTasksMenu("Tasks grouped by group");
+        exit = true;
+    }
+
+    public void fnRegisterUser() {
+        if (requestText == null || exit) {
+            return;
+        }
+
+        String normalizedRequest = requestText.trim();
+
+        if (REGISTER_USER_HELP_PATTERN.matcher(normalizedRequest).matches()) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_USER_DATA.getMessage(), telegramClient);
+            exit = true;
+            return;
+        }
+
+        String normalizedLower = normalizedRequest.toLowerCase();
+        if (!(normalizedLower.startsWith(BotCommands.REGISTER_USER.getCommand())
+            || normalizedLower.startsWith(BotCommands.REGISTER_USER.getCommand().substring(1)))) {
+            return;
+        }
+
+        Matcher matcher = REGISTER_USER_PATTERN.matcher(normalizedRequest);
+        if (!matcher.matches()) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_USER_DATA.getMessage(), telegramClient);
+            exit = true;
+            return;
+        }
+
+        try {
+            User user = new User();
+            user.setName(matcher.group(1));
+            user.setEmail(matcher.group(2));
+            user.setPassword(matcher.group(3));
+            user.setPhone(matcher.group(4));
+            user.setTelegramUserId(telegramUserId);
+            user.setTelegramChatId(chatId);
+            if (requesterUser != null && requesterUser.getUserType() != null) {
+                user.setUserType(requesterUser.getUserType());
+            }
+
+            userService.createUser(user);
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.NEW_USER_ADDED.getMessage(), telegramClient);
+        } catch (RuntimeException e) {
+            logger.error(e.getLocalizedMessage(), e);
+            String message = "Email already exists".equals(e.getMessage())
+                    ? BotMessages.USER_ALREADY_EXISTS.getMessage()
+                    : e.getMessage();
+            BotHelper.sendMessageToTelegram(chatId, message, telegramClient);
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_USER_DATA.getMessage(), telegramClient);
+        }
+
         exit = true;
     }
 
