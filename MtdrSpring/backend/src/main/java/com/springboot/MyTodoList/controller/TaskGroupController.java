@@ -11,11 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/taskgroups")
-<<<<<<< HEAD
 @CrossOrigin(origins = "http://localhost:3000")
-=======
-@CrossOrigin(origins = "*")
->>>>>>> d876586476327f2378ddd5d7f84848b8b7b7e8e0
 public class TaskGroupController {
 
     private final TaskGroupService service;
