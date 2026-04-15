@@ -142,6 +142,60 @@ public class BotActions{
         return chatActions.get(requestText);
     }
 
+    private String statusTag(TaskStatus status) {
+        if (status == null) {
+            return "[PENDING]";
+        }
+        switch (status) {
+            case completed:
+                return "[COMPLETED]";
+            case in_progress:
+                return "[IN_PROGRESS]";
+            case pending:
+            default:
+                return "[PENDING]";
+        }
+    }
+
+    private String statusTagFromString(String statusValue) {
+        if (statusValue == null) {
+            return statusTag(TaskStatus.pending);
+        }
+        try {
+            return statusTag(TaskStatus.valueOf(statusValue));
+        } catch (Exception ignored) {
+            return "[PENDING]";
+        }
+    }
+
+    private String buildGroupStatusSummary(List<Task> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return "\n\nNo tasks in this group yet.";
+        }
+
+        long pendingCount = tasks.stream().filter(task -> task.getStatus() == TaskStatus.pending).count();
+        long inProgressCount = tasks.stream().filter(task -> task.getStatus() == TaskStatus.in_progress).count();
+        long completedCount = tasks.stream().filter(task -> task.getStatus() == TaskStatus.completed).count();
+
+        StringBuilder summary = new StringBuilder();
+        summary.append("\n\nStatus Summary")
+                .append("\nPENDING: ").append(pendingCount)
+                .append("\nIN_PROGRESS: ").append(inProgressCount)
+                .append("\nCOMPLETED: ").append(completedCount)
+                .append("\n\nTasks:");
+
+        for (Task task : tasks) {
+            summary.append("\n#")
+                    .append(task.getId())
+                    .append(" ")
+                    .append(statusTag(task.getStatus()))
+                    .append(" ")
+                    .append(task.getTitle());
+        }
+
+        return summary.toString();
+    }
+
     private void renderAllTasksMenu(String titleMessage) {
         lastViewedGroupByChat.remove(chatId);
         clearTaskActionButtons();
@@ -176,7 +230,7 @@ public class BotActions{
 
             for (TaskResponseDTO task : groupEntry.getValue()) {
                 KeyboardRow taskRow = new KeyboardRow();
-                taskRow.add(task.getTitle());
+                taskRow.add(statusTagFromString(task.getStatus()) + " " + task.getTitle());
                 String status = task.getStatus() != null ? task.getStatus() : TaskStatus.pending.name();
                 if (TaskStatus.completed.name().equals(status)) {
                     taskRow.add(registerTaskActionButton("Undo #" + task.getId(), TASK_UNDO_PREFIX + task.getId()));
@@ -225,21 +279,21 @@ public class BotActions{
 
         for (Task task : activeTasks) {
             KeyboardRow row = new KeyboardRow();
-            row.add(task.getTitle());
+            row.add(statusTag(task.getStatus()) + " " + task.getTitle());
             row.add(registerTaskActionButton("Done #" + task.getId(), TASK_DONE_PREFIX + task.getId()));
             keyboard.add(row);
         }
 
         for (Task task : doneTasks) {
             KeyboardRow row = new KeyboardRow();
-            row.add(task.getTitle());
+            row.add(statusTag(task.getStatus()) + " " + task.getTitle());
             row.add(registerTaskActionButton("Undo #" + task.getId(), TASK_UNDO_PREFIX + task.getId()));
             row.add(registerTaskActionButton("Delete #" + task.getId(), TASK_DELETE_PREFIX + task.getId()));
             keyboard.add(row);
         }
 
         keyboardMarkup.setKeyboard(keyboard);
-        BotHelper.sendMessageToTelegram(chatId, titleMessage, telegramClient, keyboardMarkup);
+        BotHelper.sendMessageToTelegram(chatId, titleMessage + buildGroupStatusSummary(groupTasks), telegramClient, keyboardMarkup);
     }
 
 

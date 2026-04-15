@@ -34,10 +34,10 @@ public class Task {
     @Column(name = "due_date")
     private LocalDateTime dueDate;
 
-    @Column(name = "estimated_hours", precision = 5, scale = 2)
+    @Column(name = "estimated_hours")
     private Float estimatedHours;
 
-    @Column(name = "actual_hours", precision = 5, scale = 2)
+    @Column(name = "actual_hours")
     private Float actualHours;
 
     // FK -> users(id), nullable
