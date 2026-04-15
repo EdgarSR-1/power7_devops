@@ -19,7 +19,14 @@ docker rmi "$image_name" 2>/dev/null || true
 
 mvn clean verify
 docker build -f Dockerfile "${build_args[@]}" -t "$image_name" .
-docker run --name "$container_name" \
+
+run_args=(--name "$container_name" \
 	--memory "$docker_memory" \
 	--cpus "$docker_cpus" \
-	-p 8080:8080 -d "$image_name"
+	-p 8080:8080)
+
+if [[ -f ".env.local" ]]; then
+	run_args+=(--env-file .env.local)
+fi
+
+docker run "${run_args[@]}" -d "$image_name"
