@@ -2,12 +2,14 @@ package com.springboot.MyTodoList.service;
 
 import com.springboot.MyTodoList.dto.TaskRequestDTO;
 import com.springboot.MyTodoList.dto.TaskResponseDTO;
+import com.springboot.MyTodoList.model.Sprint;
 import com.springboot.MyTodoList.model.Task;
 import com.springboot.MyTodoList.model.TaskGroup;
 import com.springboot.MyTodoList.model.TaskPriority;
 import com.springboot.MyTodoList.model.TaskStatus;
 import com.springboot.MyTodoList.model.TodoList;
 import com.springboot.MyTodoList.model.User;
+import com.springboot.MyTodoList.repository.SprintRepository;
 import com.springboot.MyTodoList.repository.TaskGroupRepository;
 import com.springboot.MyTodoList.repository.TaskRepository;
 import com.springboot.MyTodoList.repository.TodoListRepository;
@@ -25,15 +27,18 @@ public class TaskService {
     private final TodoListRepository todoListRepository;
     private final TaskGroupRepository taskGroupRepository;
     private final UserRepository userRepository;
+    private final SprintRepository sprintRepository;
 
     public TaskService(TaskRepository taskRepository,
                        TodoListRepository todoListRepository,
                        TaskGroupRepository taskGroupRepository,
-                       UserRepository userRepository) {
+                       UserRepository userRepository,
+                       SprintRepository sprintRepository) {
         this.taskRepository = taskRepository;
         this.todoListRepository = todoListRepository;
         this.taskGroupRepository = taskGroupRepository;
         this.userRepository = userRepository;
+        this.sprintRepository = sprintRepository;
     }
 
     public TaskResponseDTO createTask(TaskRequestDTO dto) {
@@ -45,6 +50,13 @@ public class TaskService {
             createdBy = userRepository.findById(dto.getCreatedById())
                     .orElseThrow(() -> new RuntimeException("User not found"));
         }
+
+        if (dto.getStartDate() != null && dto.getEndDate() != null
+                && dto.getEndDate().isBefore(dto.getStartDate())) {
+            throw new RuntimeException("End date cannot be before start date");
+        }
+
+        Sprint sprint = resolveSprint(dto);
 
         Task task = new Task();
         task.setTodoList(todoList);
@@ -59,21 +71,42 @@ public class TaskService {
             task.setPriority(TaskPriority.valueOf(dto.getPriority()));
         }
 
+        task.setStartDate(dto.getStartDate());
+        task.setEndDate(dto.getEndDate());
         task.setDueDate(dto.getDueDate());
         task.setCreatedBy(createdBy);
+        task.setSprint(sprint);
 
         Task savedTask = taskRepository.save(task);
         return mapToResponseDTO(savedTask);
     }
 
+    private Sprint resolveSprint(TaskRequestDTO dto) {
+        if (dto.getSprintId() != null) {
+            return sprintRepository.findById(dto.getSprintId())
+                    .orElseThrow(() -> new RuntimeException("Sprint not found"));
+        }
+
+        if (dto.getStartDate() != null && dto.getEndDate() != null) {
+            return sprintRepository
+                    .findFirstByStartDateLessThanEqualAndEndDateGreaterThanEqual(
+                            dto.getStartDate(),
+                            dto.getEndDate()
+                    )
+                    .orElse(null);
+        }
+
+        return null;
+    }
+
     public List<TaskResponseDTO> getAllTasks() {
         return taskRepository.findAll()
                 .stream()
-            .sorted(Comparator
-                .comparing((Task task) -> task.getTodoList() != null && task.getTodoList().getGroup() != null
-                    ? task.getTodoList().getGroup().getName()
-                    : "")
-                .thenComparing(Task::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                .sorted(Comparator
+                        .comparing((Task task) -> task.getTodoList() != null && task.getTodoList().getGroup() != null
+                                ? task.getTodoList().getGroup().getName()
+                                : "")
+                        .thenComparing(Task::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())))
                 .map(this::mapToResponseDTO)
                 .collect(Collectors.toList());
     }
@@ -111,6 +144,9 @@ public class TaskService {
             return todoListRepository.save(createdList);
         });
 
+        Sprint sprint = null;
+        
+
         Task task = new Task();
         task.setTodoList(targetList);
         task.setTitle(title);
@@ -118,29 +154,37 @@ public class TaskService {
         task.setStatus(TaskStatus.pending);
         task.setPriority(TaskPriority.medium);
         task.setCreatedBy(group.getCreatedBy());
+        task.setSprint(sprint);
 
         return mapToResponseDTO(taskRepository.save(task));
     }
 
     private TaskResponseDTO mapToResponseDTO(Task task) {
-        String assigneeName = task.getCreatedBy() != null ? task.getCreatedBy().getName() : null;
-        String todoListName = task.getTodoList() != null ? task.getTodoList().getName() : null;
-        String groupName = null;
+    String assigneeName = task.getCreatedBy() != null ? task.getCreatedBy().getName() : null;
+    String todoListName = task.getTodoList() != null ? task.getTodoList().getName() : null;
+    String groupName = null;
+    Long sprintId = task.getSprint() != null ? task.getSprint().getId() : null;
+    String sprintName = task.getSprint() != null ? task.getSprint().getName() : null;
 
-        if (task.getTodoList() != null && task.getTodoList().getGroup() != null) {
-            groupName = task.getTodoList().getGroup().getName();
-        }
-
-        return new TaskResponseDTO(
-                task.getId(),
-                task.getTitle(),
-                task.getDescription(),
-                task.getStatus() != null ? task.getStatus().name() : null,
-                task.getPriority() != null ? task.getPriority().name() : null,
-                task.getCreatedAt(),
-                groupName,
-                todoListName,
-                assigneeName
-        );
+    if (task.getTodoList() != null && task.getTodoList().getGroup() != null) {
+        groupName = task.getTodoList().getGroup().getName();
     }
+
+    return new TaskResponseDTO(
+            task.getId(),
+            task.getTitle(),
+            task.getDescription(),
+            task.getStatus() != null ? task.getStatus().name() : null,
+            task.getPriority() != null ? task.getPriority().name() : null,
+            task.getStartDate(),
+            task.getEndDate(),
+            task.getDueDate(),
+            task.getCreatedAt(),
+            groupName,
+            todoListName,
+            assigneeName,
+            sprintId,
+            sprintName
+    );
+}
 }

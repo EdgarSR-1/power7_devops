@@ -31,13 +31,24 @@ public class Task {
     @Column(name = "priority", length = 20)
     private TaskPriority priority = TaskPriority.medium;
 
+    @Column(name = "start_date")
+    private LocalDateTime startDate;
+
+    @Column(name = "end_date")
+    private LocalDateTime endDate;
+
     @Column(name = "due_date")
     private LocalDateTime dueDate;
 
-    // FK -> users(id), nullable
+    // FK -> users(id)
     @ManyToOne
     @JoinColumn(name = "created_by")
     private User createdBy;
+
+    // FK -> sprints(id)
+    @ManyToOne
+    @JoinColumn(name = "sprint_id")
+    private Sprint sprint;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -45,37 +56,41 @@ public class Task {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+
         if (this.status == null) {
             this.status = TaskStatus.pending;
         }
+
         if (this.priority == null) {
             this.priority = TaskPriority.medium;
         }
     }
 
-    public Task() {
-    }
+    public Task() {}
 
     public Task(Long id, TodoList todoList, String title, String description,
-                TaskStatus status, TaskPriority priority, LocalDateTime dueDate,
-                User createdBy, LocalDateTime createdAt) {
+                TaskStatus status, TaskPriority priority,
+                LocalDateTime startDate, LocalDateTime endDate, LocalDateTime dueDate,
+                User createdBy, Sprint sprint, LocalDateTime createdAt) {
+
         this.id = id;
         this.todoList = todoList;
         this.title = title;
         this.description = description;
         this.status = status;
         this.priority = priority;
+        this.startDate = startDate;
+        this.endDate = endDate;
         this.dueDate = dueDate;
         this.createdBy = createdBy;
+        this.sprint = sprint;
         this.createdAt = createdAt;
     }
 
+    // ===== GETTERS & SETTERS =====
+
     public Long getId() {
         return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public TodoList getTodoList() {
@@ -84,6 +99,10 @@ public class Task {
 
     public void setTodoList(TodoList todoList) {
         this.todoList = todoList;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getTitle() {
@@ -118,6 +137,22 @@ public class Task {
         this.priority = priority;
     }
 
+    public LocalDateTime getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDateTime startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDateTime getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDateTime endDate) {
+        this.endDate = endDate;
+    }
+
     public LocalDateTime getDueDate() {
         return dueDate;
     }
@@ -132,6 +167,14 @@ public class Task {
 
     public void setCreatedBy(User createdBy) {
         this.createdBy = createdBy;
+    }
+
+    public Sprint getSprint() {
+        return sprint;
+    }
+
+    public void setSprint(Sprint sprint) {
+        this.sprint = sprint;
     }
 
     public LocalDateTime getCreatedAt() {

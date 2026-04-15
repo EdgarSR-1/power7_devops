@@ -8,26 +8,38 @@ public class TaskResponseDTO {
     private String description;
     private String status;
     private String priority;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
+    private LocalDateTime dueDate;
     private LocalDateTime createdAt;
     private String groupName;
     private String todoListName;
     private String assigneeName;
+    private Long sprintId;
+    private String sprintName;
 
     public TaskResponseDTO() {
     }
 
     public TaskResponseDTO(Long id, String title, String description, String status,
-                           String priority, LocalDateTime createdAt,
-                           String groupName, String todoListName, String assigneeName) {
+                           String priority, LocalDateTime startDate, LocalDateTime endDate,
+                           LocalDateTime dueDate, LocalDateTime createdAt,
+                           String groupName, String todoListName, String assigneeName,
+                           Long sprintId, String sprintName) {
         this.id = id;
         this.title = title;
         this.description = description;
         this.status = status;
         this.priority = priority;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.dueDate = dueDate;
         this.createdAt = createdAt;
         this.groupName = groupName;
         this.todoListName = todoListName;
         this.assigneeName = assigneeName;
+        this.sprintId = sprintId;
+        this.sprintName = sprintName;
     }
 
     public Long getId() {
@@ -70,6 +82,30 @@ public class TaskResponseDTO {
         this.priority = priority;
     }
 
+    public LocalDateTime getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDateTime startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDateTime getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDateTime endDate) {
+        this.endDate = endDate;
+    }
+
+    public LocalDateTime getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(LocalDateTime dueDate) {
+        this.dueDate = dueDate;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -100,5 +136,21 @@ public class TaskResponseDTO {
 
     public void setAssigneeName(String assigneeName) {
         this.assigneeName = assigneeName;
+    }
+
+    public Long getSprintId() {
+        return sprintId;
+    }
+
+    public void setSprintId(Long sprintId) {
+        this.sprintId = sprintId;
+    }
+
+    public String getSprintName() {
+        return sprintName;
+    }
+
+    public void setSprintName(String sprintName) {
+        this.sprintName = sprintName;
     }
 }
