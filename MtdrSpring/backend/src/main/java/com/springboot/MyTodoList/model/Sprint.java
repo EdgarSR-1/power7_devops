@@ -20,6 +20,9 @@ public class Sprint {
     @Column(name = "end_date", nullable = false)
     private LocalDateTime endDate;
 
+    @Column(name = "group_id", nullable = true)
+    private Long groupId;
+
     public Sprint() {
     }
 
@@ -28,6 +31,14 @@ public class Sprint {
         this.name = name;
         this.startDate = startDate;
         this.endDate = endDate;
+    }
+
+    public Sprint(Long id, String name, LocalDateTime startDate, LocalDateTime endDate, Long groupId) {
+        this.id = id;
+        this.name = name;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.groupId = groupId;
     }
 
     public Long getId() {
@@ -60,5 +71,13 @@ public class Sprint {
 
     public void setEndDate(LocalDateTime endDate) {
         this.endDate = endDate;
+    }
+
+    public Long getGroupId() {
+        return groupId;
+    }
+
+    public void setGroupId(Long groupId) {
+        this.groupId = groupId;
     }
 }
