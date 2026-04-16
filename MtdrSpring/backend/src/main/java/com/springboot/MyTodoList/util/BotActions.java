@@ -1,6 +1,8 @@
 package com.springboot.MyTodoList.util;
 
 import com.springboot.MyTodoList.dto.TaskResponseDTO;
+import com.springboot.MyTodoList.dto.SprintRequestDTO;
+import com.springboot.MyTodoList.model.Sprint;
 import com.springboot.MyTodoList.model.Task;
 import com.springboot.MyTodoList.model.TaskGroup;
 import com.springboot.MyTodoList.model.TaskStatus;
@@ -8,6 +10,7 @@ import com.springboot.MyTodoList.model.ToDoItem;
 import com.springboot.MyTodoList.model.User;
 import com.springboot.MyTodoList.model.UserType;
 import com.springboot.MyTodoList.service.DeepSeekService;
+import com.springboot.MyTodoList.service.SprintService;
 import com.springboot.MyTodoList.service.TaskGroupService;
 import com.springboot.MyTodoList.service.TaskService;
 import com.springboot.MyTodoList.service.ToDoItemService;
@@ -21,6 +24,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
@@ -34,6 +40,10 @@ public class BotActions{
     private static final String TASK_DONE_PREFIX = "TASKDONE::";
     private static final String TASK_UNDO_PREFIX = "TASKUNDO::";
     private static final String TASK_DELETE_PREFIX = "TASKDEL::";
+    private static final String TASK_START_PREFIX = "TASKSTART::";
+    private static final String TASK_MOVE_PREFIX = "TASKMOVE::";
+    private static final float MAX_ESTIMATED_HOURS_PER_TASK = 4f;
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
             private static final Pattern REGISTER_USER_PATTERN = Pattern.compile(
                 "^/?registeruser(?:@\\w+)?\\s+(.+?)\\s+([^\\s]+)\\s+([^\\s]+)\\s+([^\\s]+)\\s*$",
             Pattern.CASE_INSENSITIVE
@@ -47,7 +57,11 @@ public class BotActions{
                     Pattern.CASE_INSENSITIVE
                 );
     private static final Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
+    private static final Map<Long, String> pendingTaskTitleByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
+    private static final Map<Long, Long> pendingMoveSprintTaskByChat = new ConcurrentHashMap<>();
+    private static final Map<Long, Long> pendingCompleteTaskByChat = new ConcurrentHashMap<>();
+    private static final Map<Long, Map<String, String>> groupSelectionButtonsByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Map<String, String>> taskActionButtonsByChat = new ConcurrentHashMap<>();
 
     String requestText;
@@ -59,14 +73,16 @@ public class BotActions{
 
     ToDoItemService todoService;
     DeepSeekService deepSeekService;
+    SprintService sprintService;
     TaskService taskService;
     TaskGroupService taskGroupService;
     UserService userService;
 
-    public BotActions(TelegramClient tc, ToDoItemService ts, DeepSeekService ds, TaskService tks, TaskGroupService tgs, UserService us){
+    public BotActions(TelegramClient tc, ToDoItemService ts, DeepSeekService ds, SprintService ss, TaskService tks, TaskGroupService tgs, UserService us){
         telegramClient = tc;
         todoService = ts;
         deepSeekService = ds;
+        sprintService = ss;
         taskService = tks;
         taskGroupService = tgs;
         userService = us;
@@ -121,6 +137,15 @@ public class BotActions{
         taskActionButtonsByChat.put(chatId, new ConcurrentHashMap<>());
     }
 
+    private void clearGroupSelectionButtons() {
+        groupSelectionButtonsByChat.put(chatId, new ConcurrentHashMap<>());
+    }
+
+    private String registerGroupSelectionButton(String visibleLabel, String actionToken) {
+        groupSelectionButtonsByChat.computeIfAbsent(chatId, key -> new ConcurrentHashMap<>()).put(visibleLabel, actionToken);
+        return visibleLabel;
+    }
+
     private String registerTaskActionButton(String visibleLabel, String actionToken) {
         taskActionButtonsByChat.computeIfAbsent(chatId, key -> new ConcurrentHashMap<>()).put(visibleLabel, actionToken);
         return visibleLabel;
@@ -131,6 +156,8 @@ public class BotActions{
             return null;
         }
         if (requestText.startsWith(TASK_DONE_PREFIX)
+                || requestText.startsWith(TASK_START_PREFIX)
+                || requestText.startsWith(TASK_MOVE_PREFIX)
                 || requestText.startsWith(TASK_UNDO_PREFIX)
                 || requestText.startsWith(TASK_DELETE_PREFIX)) {
             return requestText;
@@ -140,6 +167,47 @@ public class BotActions{
             return null;
         }
         return chatActions.get(requestText);
+    }
+
+    private String resolveGroupSelectionToken() {
+        if (requestText == null) {
+            return null;
+        }
+
+        if (requestText.startsWith(GROUP_SELECTION_PREFIX) || requestText.startsWith(BotLabels.SELECT_GROUP_FOR_NEW_TASK_PREFIX.getLabel())) {
+            return requestText;
+        }
+
+        Map<String, String> chatActions = groupSelectionButtonsByChat.get(chatId);
+        if (chatActions == null) {
+            return null;
+        }
+
+        return chatActions.get(requestText);
+    }
+
+    private void registerPendingMoveSprintTask(Long taskId) {
+        pendingMoveSprintTaskByChat.put(chatId, taskId);
+    }
+
+    private Long getPendingMoveSprintTask() {
+        return pendingMoveSprintTaskByChat.get(chatId);
+    }
+
+    private void clearPendingMoveSprintTask() {
+        pendingMoveSprintTaskByChat.remove(chatId);
+    }
+
+    private void registerPendingCompleteTask(Long taskId) {
+        pendingCompleteTaskByChat.put(chatId, taskId);
+    }
+
+    private Long getPendingCompleteTask() {
+        return pendingCompleteTaskByChat.get(chatId);
+    }
+
+    private void clearPendingCompleteTask() {
+        pendingCompleteTaskByChat.remove(chatId);
     }
 
     private String statusTag(TaskStatus status) {
@@ -190,10 +258,150 @@ public class BotActions{
                     .append(" ")
                     .append(statusTag(task.getStatus()))
                     .append(" ")
-                    .append(task.getTitle());
+                    .append(task.getTitle())
+                    .append("\n  Sprint: ")
+                    .append(task.getSprint() != null && task.getSprint().getName() != null ? task.getSprint().getName() : "-")
+                    .append("\n  Estimated: ")
+                    .append(formatHours(task.getEstimatedHours()))
+                    .append("h | Actual: ")
+                    .append(formatHours(task.getActualHours()))
+                    .append("h")
+                    .append("\n  Start: ")
+                    .append(formatDateTime(task.getStartDate()))
+                    .append(" | End: ")
+                    .append(formatDateTime(task.getEndDate()))
+                    .append(" | Due: ")
+                    .append(formatDateTime(task.getDueDate()));
         }
 
         return summary.toString();
+    }
+
+    private String buildAllTasksSummary(Map<String, List<TaskResponseDTO>> tasksByGroup) {
+        if (tasksByGroup == null || tasksByGroup.isEmpty()) {
+            return "\n\nNo tasks available.";
+        }
+
+        StringBuilder summary = new StringBuilder("\n\nTasks Overview");
+        for (Map.Entry<String, List<TaskResponseDTO>> groupEntry : tasksByGroup.entrySet()) {
+            summary.append("\n\n[")
+                    .append(groupEntry.getKey())
+                    .append("]");
+
+            if (groupEntry.getValue().isEmpty()) {
+                summary.append("\n- No tasks");
+                continue;
+            }
+
+            for (TaskResponseDTO task : groupEntry.getValue()) {
+                summary.append("\n#")
+                        .append(task.getId())
+                        .append(" ")
+                        .append(statusTagFromString(task.getStatus()))
+                        .append(" ")
+                        .append(task.getTitle())
+                        .append("\n  Sprint: ")
+                        .append(task.getSprintName() != null ? task.getSprintName() : "-")
+                        .append("\n  Start: ")
+                        .append(formatDateTime(task.getStartDate()))
+                        .append(" | End: ")
+                        .append(formatDateTime(task.getEndDate()))
+                        .append(" | Due: ")
+                        .append(formatDateTime(task.getDueDate()));
+            }
+        }
+
+        return summary.toString();
+    }
+
+    private String formatDateTime(LocalDateTime value) {
+        if (value == null) {
+            return "-";
+        }
+        return value.format(DATE_TIME_FORMATTER);
+    }
+
+    private String formatHours(Float value) {
+        return value == null ? "-" : String.format("%.1f", value);
+    }
+
+    private ReplyKeyboardMarkup buildMainMenuKeyboard() {
+        return ReplyKeyboardMarkup
+                .builder()
+                .keyboardRow(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(), BotLabels.ADD_NEW_ITEM.getLabel()))
+                .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel(), BotLabels.CREATE_GROUP.getLabel()))
+                .keyboardRow(new KeyboardRow(BotLabels.LIST_SPRINT_TASKS.getLabel(), BotLabels.LIST_SPRINTS.getLabel()))
+                .keyboardRow(new KeyboardRow(BotLabels.CREATE_SPRINT.getLabel()))
+                .keyboardRow(new KeyboardRow(BotLabels.SHOW_MAIN_SCREEN.getLabel(), BotLabels.HIDE_MAIN_SCREEN.getLabel()))
+                .build();
+    }
+
+    private void sendMessageWithMainMenu(String message) {
+        BotHelper.sendMessageToTelegram(chatId, message, telegramClient, buildMainMenuKeyboard());
+    }
+
+    private void sendSprintTasksSummary(Sprint sprint, List<Task> sprintTasks) {
+        if (sprintTasks == null || sprintTasks.isEmpty()) {
+            sendMessageWithMainMenu(BotMessages.NO_TASKS_IN_SPRINT.getMessage());
+            return;
+        }
+
+        List<Task> pendingTasks = sprintTasks.stream()
+                .filter(task -> task.getStatus() == null || task.getStatus() == TaskStatus.pending)
+                .collect(Collectors.toList());
+        List<Task> inProgressTasks = sprintTasks.stream()
+                .filter(task -> task.getStatus() == TaskStatus.in_progress)
+                .collect(Collectors.toList());
+        List<Task> completedTasks = sprintTasks.stream()
+                .filter(task -> task.getStatus() == TaskStatus.completed)
+                .collect(Collectors.toList());
+
+        StringBuilder summary = new StringBuilder();
+        summary.append("Sprint ")
+                .append(sprint.getName() != null ? sprint.getName() : "(no name)")
+                .append(" (#")
+                .append(sprint.getId())
+                .append(")\n")
+                .append("Range: ")
+                .append(formatDateTime(sprint.getStartDate()))
+                .append(" -> ")
+                .append(formatDateTime(sprint.getEndDate()))
+                .append("\n\nStatus Summary")
+                .append("\nPENDING: ").append(pendingTasks.size())
+                .append("\nIN_PROGRESS: ").append(inProgressTasks.size())
+                .append("\nCOMPLETED: ").append(completedTasks.size());
+
+        appendTaskSection(summary, "PENDING", pendingTasks);
+        appendTaskSection(summary, "IN_PROGRESS", inProgressTasks);
+        appendTaskSection(summary, "COMPLETED", completedTasks);
+
+        sendMessageWithMainMenu(summary.toString());
+    }
+
+    private void appendTaskSection(StringBuilder summary, String sectionTitle, List<Task> tasks) {
+        summary.append("\n\n[").append(sectionTitle).append("]");
+        if (tasks.isEmpty()) {
+            summary.append("\n- No tasks");
+            return;
+        }
+
+        for (Task task : tasks) {
+            summary.append("\n#")
+                    .append(task.getId())
+                    .append(" ")
+                    .append(task.getTitle())
+                    .append("\n  Estimated: ")
+                    .append(formatHours(task.getEstimatedHours()))
+                    .append("h | Actual: ")
+                    .append(formatHours(task.getActualHours()))
+                    .append("h")
+                    .append("\n  Start: ")
+                    .append(formatDateTime(task.getStartDate()))
+                    .append(" | End: ")
+                    .append(formatDateTime(task.getEndDate()))
+                    .append(" | Due: ")
+                    .append(formatDateTime(task.getDueDate()));
+        }
     }
 
     private void renderAllTasksMenu(String titleMessage) {
@@ -235,7 +443,11 @@ public class BotActions{
                 if (TaskStatus.completed.name().equals(status)) {
                     taskRow.add(registerTaskActionButton("Undo #" + task.getId(), TASK_UNDO_PREFIX + task.getId()));
                     taskRow.add(registerTaskActionButton("Delete #" + task.getId(), TASK_DELETE_PREFIX + task.getId()));
+                } else if (TaskStatus.pending.name().equals(status)) {
+                    taskRow.add(registerTaskActionButton("Start #" + task.getId(), TASK_START_PREFIX + task.getId()));
+                    taskRow.add(registerTaskActionButton("Move Sprint #" + task.getId(), TASK_MOVE_PREFIX + task.getId()));
                 } else {
+                    taskRow.add(registerTaskActionButton("Move Sprint #" + task.getId(), TASK_MOVE_PREFIX + task.getId()));
                     taskRow.add(registerTaskActionButton("Done #" + task.getId(), TASK_DONE_PREFIX + task.getId()));
                 }
                 keyboard.add(taskRow);
@@ -247,7 +459,7 @@ public class BotActions{
         keyboard.add(mainScreenRowBottom);
 
         keyboardMarkup.setKeyboard(keyboard);
-        BotHelper.sendMessageToTelegram(chatId, titleMessage, telegramClient, keyboardMarkup);
+        BotHelper.sendMessageToTelegram(chatId, titleMessage + buildAllTasksSummary(tasksByGroup), telegramClient, keyboardMarkup);
     }
 
     private void renderGroupTasksMenu(Long groupId, String titleMessage) {
@@ -280,7 +492,13 @@ public class BotActions{
         for (Task task : activeTasks) {
             KeyboardRow row = new KeyboardRow();
             row.add(statusTag(task.getStatus()) + " " + task.getTitle());
-            row.add(registerTaskActionButton("Done #" + task.getId(), TASK_DONE_PREFIX + task.getId()));
+            if (task.getStatus() == TaskStatus.pending) {
+                row.add(registerTaskActionButton("Start #" + task.getId(), TASK_START_PREFIX + task.getId()));
+                row.add(registerTaskActionButton("Move Sprint #" + task.getId(), TASK_MOVE_PREFIX + task.getId()));
+            } else {
+                row.add(registerTaskActionButton("Move Sprint #" + task.getId(), TASK_MOVE_PREFIX + task.getId()));
+                row.add(registerTaskActionButton("Done #" + task.getId(), TASK_DONE_PREFIX + task.getId()));
+            }
             keyboard.add(row);
         }
 
@@ -314,6 +532,8 @@ public class BotActions{
             welcomeMessage = "Hello, " + requesterUser.getName().trim() + "!\n" + welcomeMessage;
         }
 
+        welcomeMessage += "\n\nSprint commands:\n/sprints\n/createsprint name|yyyy-MM-dd HH:mm|yyyy-MM-dd HH:mm";
+
         String roleMessage = "";
         String userIdText = "N/A";
         String userTypeText = "UNREGISTERED";
@@ -339,13 +559,7 @@ public class BotActions{
             }
         }
 
-        BotHelper.sendMessageToTelegram(chatId, welcomeMessage + roleMessage + identityDebug, telegramClient,  ReplyKeyboardMarkup
-            .builder()
-            .keyboardRow(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(),BotLabels.ADD_NEW_ITEM.getLabel()))
-            .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel(), BotLabels.CREATE_GROUP.getLabel()))
-            .keyboardRow(new KeyboardRow(BotLabels.SHOW_MAIN_SCREEN.getLabel(),BotLabels.HIDE_MAIN_SCREEN.getLabel()))
-            .build()
-        );
+        BotHelper.sendMessageToTelegram(chatId, welcomeMessage + roleMessage + identityDebug, telegramClient, buildMainMenuKeyboard());
         exit = true;
     }
 
@@ -393,6 +607,7 @@ public class BotActions{
             .build();
 
         List<KeyboardRow> keyboard = new ArrayList<>();
+        clearGroupSelectionButtons();
         KeyboardRow topRow = new KeyboardRow();
         topRow.add(BotLabels.SHOW_MAIN_SCREEN.getLabel());
         keyboard.add(topRow);
@@ -403,7 +618,7 @@ public class BotActions{
 
         for (TaskGroup group : groups) {
             KeyboardRow row = new KeyboardRow();
-            row.add(GROUP_SELECTION_PREFIX + group.getId() + BotLabels.DASH.getLabel() + group.getName());
+            row.add(registerGroupSelectionButton(group.getName(), GROUP_SELECTION_PREFIX + group.getId()));
             keyboard.add(row);
         }
 
@@ -413,17 +628,19 @@ public class BotActions{
     }
 
     public void fnListGroupTasks() {
-        if (!requestText.startsWith(GROUP_SELECTION_PREFIX) || exit)
+        if (exit)
             return;
 
         try {
-            String payload = requestText.substring(GROUP_SELECTION_PREFIX.length());
-            String groupIdToken = payload.contains(BotLabels.DASH.getLabel())
-                    ? payload.substring(0, payload.indexOf(BotLabels.DASH.getLabel()))
-                    : payload;
+            String actionToken = resolveGroupSelectionToken();
+            if (actionToken == null || !actionToken.startsWith(GROUP_SELECTION_PREFIX)) {
+                return;
+            }
+
+            String groupIdToken = actionToken.substring(GROUP_SELECTION_PREFIX.length());
             Long groupId = Long.valueOf(groupIdToken);
 
-                renderGroupTasksMenu(groupId, "Group tasks");
+            renderGroupTasksMenu(groupId, "Group tasks");
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
             BotHelper.sendMessageToTelegram(chatId, "Could not load tasks for this group", telegramClient);
@@ -442,12 +659,30 @@ public class BotActions{
 
         try {
             Long taskId = Long.valueOf(actionToken.substring(TASK_DONE_PREFIX.length()));
-            taskService.updateTaskStatus(taskId, TaskStatus.completed);
+            registerPendingCompleteTask(taskId);
+            sendMessageWithMainMenu("Type the actual hours spent to finish Task #" + taskId + ".");
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+        }
+        exit = true;
+    }
+
+    public void fnTaskStart() {
+        if (exit)
+            return;
+
+        String actionToken = resolveTaskActionToken();
+        if (actionToken == null || !actionToken.startsWith(TASK_START_PREFIX))
+            return;
+
+        try {
+            Long taskId = Long.valueOf(actionToken.substring(TASK_START_PREFIX.length()));
+            taskService.startTask(taskId);
             Long groupId = lastViewedGroupByChat.get(chatId);
             if (groupId != null) {
-                renderGroupTasksMenu(groupId, BotMessages.ITEM_DONE.getMessage());
+                renderGroupTasksMenu(groupId, "Task started!");
             } else {
-                renderAllTasksMenu(BotMessages.ITEM_DONE.getMessage());
+                renderAllTasksMenu("Task started!");
             }
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
@@ -578,6 +813,156 @@ public class BotActions{
         exit = true;
     }
 
+    public void fnSprintTasks() {
+        if (exit || requestText == null) {
+            return;
+        }
+
+        String normalizedRequest = requestText.trim();
+        boolean requestedFromMenu = normalizedRequest.equals(BotLabels.LIST_SPRINT_TASKS.getLabel());
+        boolean requestedFromCommand = normalizedRequest.toLowerCase().startsWith(BotCommands.SPRINT_TASKS.getCommand());
+
+        if (!requestedFromMenu && !requestedFromCommand) {
+            return;
+        }
+
+        try {
+            if (requestedFromMenu || normalizedRequest.equalsIgnoreCase(BotCommands.SPRINT_TASKS.getCommand())) {
+                Optional<Sprint> currentSprint = taskService.getCurrentSprint();
+                if (currentSprint.isEmpty()) {
+                    sendMessageWithMainMenu(BotMessages.NO_CURRENT_SPRINT.getMessage());
+                    exit = true;
+                    return;
+                }
+
+                Sprint sprint = currentSprint.get();
+                List<Task> sprintTasks = taskService.getTasksBySprintId(sprint.getId());
+                sendSprintTasksSummary(sprint, sprintTasks);
+                exit = true;
+                return;
+            }
+
+            String payload = normalizedRequest.substring(BotCommands.SPRINT_TASKS.getCommand().length()).trim();
+            Long sprintId;
+            try {
+                sprintId = Long.parseLong(payload);
+            } catch (NumberFormatException ex) {
+                sendMessageWithMainMenu(BotMessages.SPRINT_TASKS_FORMAT.getMessage());
+                exit = true;
+                return;
+            }
+
+            Sprint sprint = taskService.getSprintById(sprintId);
+            List<Task> sprintTasks = taskService.getTasksBySprintId(sprintId);
+            sendSprintTasksSummary(sprint, sprintTasks);
+        } catch (RuntimeException ex) {
+            sendMessageWithMainMenu(ex.getMessage());
+        } catch (Exception ex) {
+            logger.error(ex.getLocalizedMessage(), ex);
+            sendMessageWithMainMenu(BotMessages.SPRINT_TASKS_FORMAT.getMessage());
+        }
+
+        exit = true;
+    }
+
+    public void fnListSprints() {
+        if (exit || requestText == null) {
+            return;
+        }
+
+        String normalizedRequest = requestText.trim();
+        boolean requestedFromMenu = normalizedRequest.equals(BotLabels.LIST_SPRINTS.getLabel());
+        boolean requestedFromCommand = normalizedRequest.toLowerCase().startsWith(BotCommands.SPRINTS.getCommand());
+
+        if (!requestedFromMenu && !requestedFromCommand) {
+            return;
+        }
+
+        try {
+            List<Sprint> sprints = sprintService.findAll();
+            if (sprints.isEmpty()) {
+                sendMessageWithMainMenu(BotMessages.NO_SPRINTS_FOUND.getMessage());
+                exit = true;
+                return;
+            }
+
+            StringBuilder summary = new StringBuilder("Sprints\n");
+            for (Sprint sprint : sprints) {
+                summary.append("\n#")
+                        .append(sprint.getId())
+                        .append(" ")
+                        .append(sprint.getName() != null ? sprint.getName() : "(no name)")
+                        .append("\n  Start: ")
+                        .append(formatDateTime(sprint.getStartDate()))
+                        .append(" | End: ")
+                        .append(formatDateTime(sprint.getEndDate()));
+            }
+
+            sendMessageWithMainMenu(summary.toString());
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+            sendMessageWithMainMenu(BotMessages.NO_SPRINTS_FOUND.getMessage());
+        }
+
+        exit = true;
+    }
+
+    public void fnCreateSprint() {
+        if (exit || requestText == null) {
+            return;
+        }
+
+        String normalizedRequest = requestText.trim();
+        if (normalizedRequest.equals(BotLabels.CREATE_SPRINT.getLabel())) {
+            sendMessageWithMainMenu(BotMessages.CREATE_SPRINT_FORMAT.getMessage());
+            exit = true;
+            return;
+        }
+
+        String normalizedLower = requestText.toLowerCase().trim();
+        if (!normalizedLower.startsWith(BotCommands.CREATE_SPRINT.getCommand())) {
+            return;
+        }
+
+        String payload = requestText.substring(BotCommands.CREATE_SPRINT.getCommand().length()).trim();
+        String[] parts = payload.split("\\|");
+        if (parts.length < 3) {
+            sendMessageWithMainMenu(BotMessages.CREATE_SPRINT_FORMAT.getMessage());
+            exit = true;
+            return;
+        }
+
+        String name = parts[0].trim();
+        String startText = parts[1].trim();
+        String endText = parts[2].trim();
+
+        try {
+            LocalDateTime startDate = LocalDateTime.parse(startText, DATE_TIME_FORMATTER);
+            LocalDateTime endDate = LocalDateTime.parse(endText, DATE_TIME_FORMATTER);
+
+            if (endDate.isBefore(startDate)) {
+                sendMessageWithMainMenu("Sprint end date cannot be before start date.");
+                exit = true;
+                return;
+            }
+
+            SprintRequestDTO sprintRequest = new SprintRequestDTO();
+            sprintRequest.setName(name);
+            sprintRequest.setStartDate(startDate);
+            sprintRequest.setEndDate(endDate);
+
+            Sprint createdSprint = sprintService.createSprint(sprintRequest);
+
+            String message = String.format(BotMessages.SPRINT_CREATED.getMessage(), createdSprint.getName(), createdSprint.getId());
+            sendMessageWithMainMenu(message);
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+            sendMessageWithMainMenu(BotMessages.CREATE_SPRINT_FORMAT.getMessage());
+        }
+
+        exit = true;
+    }
+
     public void fnRegisterUser() {
         if (requestText == null || exit) {
             return;
@@ -645,6 +1030,7 @@ public class BotActions{
                 .selective(true)
                 .build();
         List<KeyboardRow> keyboard = new ArrayList<>();
+        clearGroupSelectionButtons();
 
         KeyboardRow topRow = new KeyboardRow();
         topRow.add(BotLabels.SHOW_MAIN_SCREEN.getLabel());
@@ -652,7 +1038,7 @@ public class BotActions{
 
         for (TaskGroup group : groups) {
             KeyboardRow row = new KeyboardRow();
-            row.add(BotLabels.SELECT_GROUP_FOR_NEW_TASK_PREFIX.getLabel() + group.getId() + BotLabels.DASH.getLabel() + group.getName());
+            row.add(registerGroupSelectionButton(group.getName(), BotLabels.SELECT_GROUP_FOR_NEW_TASK_PREFIX.getLabel() + group.getId()));
             keyboard.add(row);
         }
 
@@ -662,14 +1048,16 @@ public class BotActions{
     }
 
     public void fnSelectGroupForNewTask() {
-        if (!requestText.startsWith(BotLabels.SELECT_GROUP_FOR_NEW_TASK_PREFIX.getLabel()) || exit)
+        if (exit)
             return;
 
         try {
-            String payload = requestText.substring(BotLabels.SELECT_GROUP_FOR_NEW_TASK_PREFIX.getLabel().length());
-            String groupIdToken = payload.contains(BotLabels.DASH.getLabel())
-                    ? payload.substring(0, payload.indexOf(BotLabels.DASH.getLabel()))
-                    : payload;
+            String actionToken = resolveGroupSelectionToken();
+            if (actionToken == null || !actionToken.startsWith(BotLabels.SELECT_GROUP_FOR_NEW_TASK_PREFIX.getLabel())) {
+                return;
+            }
+
+            String groupIdToken = actionToken.substring(BotLabels.SELECT_GROUP_FOR_NEW_TASK_PREFIX.getLabel().length());
             Long groupId = Long.valueOf(groupIdToken);
             pendingTaskGroupByChat.put(chatId, groupId);
             BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_TASK_TITLE.getMessage(), telegramClient);
@@ -689,13 +1077,42 @@ public class BotActions{
         if (selectedGroupId == null)
             return;
 
-        String title = requestText != null ? requestText.trim() : "";
-        if (title.isEmpty() || title.startsWith("/"))
+        String input = requestText != null ? requestText.trim() : "";
+        if (input.isEmpty() || input.startsWith("/"))
             return;
 
         try {
-            taskService.createTaskInGroup(selectedGroupId, title);
+            String pendingTitle = pendingTaskTitleByChat.get(chatId);
+
+            if (pendingTitle == null) {
+                pendingTaskTitleByChat.put(chatId, input);
+                BotHelper.sendMessageToTelegram(
+                        chatId,
+                        BotMessages.TYPE_NEW_TASK_ESTIMATED_HOURS.getMessage(),
+                        telegramClient
+                );
+                exit = true;
+                return;
+            }
+
+            Float estimatedHours;
+            try {
+                estimatedHours = Float.parseFloat(input);
+            } catch (NumberFormatException e) {
+                sendMessageWithMainMenu(BotMessages.INVALID_HOURS.getMessage());
+                exit = true;
+                return;
+            }
+
+            if (estimatedHours <= 0) {
+                sendMessageWithMainMenu("Hours must be greater than 0.");
+                exit = true;
+                return;
+            }
+
+            taskService.createTaskInGroupWithHours(selectedGroupId, pendingTitle, estimatedHours, requesterUser);
             pendingTaskGroupByChat.remove(chatId);
+            pendingTaskTitleByChat.remove(chatId);
             renderGroupTasksMenu(selectedGroupId, BotMessages.NEW_ITEM_ADDED.getMessage());
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
@@ -709,7 +1126,11 @@ public class BotActions{
         if(exit)
             return;
         if (pendingTaskGroupByChat.containsKey(chatId)) {
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_TASK_TITLE.getMessage(), telegramClient, null);
+            if (pendingTaskTitleByChat.containsKey(chatId)) {
+                BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_TASK_ESTIMATED_HOURS.getMessage(), telegramClient, null);
+            } else {
+                BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_TASK_TITLE.getMessage(), telegramClient, null);
+            }
             exit = true;
         }
     }
@@ -728,7 +1149,7 @@ public class BotActions{
         String[] parts = payload.split("\\s+");
         
         if (parts.length < 2) {
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.ADD_TASK_FORMAT.getMessage(), telegramClient);
+            sendMessageWithMainMenu(BotMessages.ADD_TASK_FORMAT.getMessage());
             exit = true;
             return;
         }
@@ -736,20 +1157,20 @@ public class BotActions{
         Float estimatedHours = null;
         try {
             estimatedHours = Float.parseFloat(parts[parts.length - 1]);
-            if (estimatedHours <= 0 || estimatedHours > 40) {
-                BotHelper.sendMessageToTelegram(chatId, "Hours must be between 0.5 and 40.", telegramClient);
+            if (estimatedHours <= 0) {
+                sendMessageWithMainMenu("Hours must be greater than 0.");
                 exit = true;
                 return;
             }
         } catch (NumberFormatException e) {
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_HOURS.getMessage(), telegramClient);
+            sendMessageWithMainMenu(BotMessages.INVALID_HOURS.getMessage());
             exit = true;
             return;
         }
 
         String title = payload.substring(0, payload.lastIndexOf(String.valueOf(estimatedHours))).trim();
         if (title.isEmpty()) {
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.ADD_TASK_FORMAT.getMessage(), telegramClient);
+            sendMessageWithMainMenu(BotMessages.ADD_TASK_FORMAT.getMessage());
             exit = true;
             return;
         }
@@ -757,20 +1178,123 @@ public class BotActions{
         try {
             List<TaskGroup> groups = taskGroupService.findAll();
             if (groups.isEmpty()) {
-                BotHelper.sendMessageToTelegram(chatId, "No groups found. Create one first.", telegramClient);
+                sendMessageWithMainMenu("No groups found. Create one first.");
                 exit = true;
                 return;
             }
             
             TaskGroup defaultGroup = groups.get(0);
-            taskService.createTaskInGroupWithHours(defaultGroup.getId(), title, estimatedHours);
-            String message = String.format(BotMessages.TASK_ADDED_WITH_HOURS.getMessage(), 
-                    estimatedHours, requesterUser != null ? requesterUser.getName() : "Unknown");
-            BotHelper.sendMessageToTelegram(chatId, message, telegramClient);
+
+            if (estimatedHours <= MAX_ESTIMATED_HOURS_PER_TASK) {
+                taskService.createTaskInGroupWithHours(defaultGroup.getId(), title, estimatedHours, requesterUser);
+                String message = String.format(BotMessages.TASK_ADDED_WITH_HOURS.getMessage(),
+                        estimatedHours, requesterUser != null ? requesterUser.getName() : "Unknown");
+                sendMessageWithMainMenu(message);
+            } else {
+                int partsCount = (int) Math.ceil(estimatedHours / MAX_ESTIMATED_HOURS_PER_TASK);
+                float remainingHours = estimatedHours;
+
+                for (int i = 1; i <= partsCount; i++) {
+                    float splitHours = Math.min(MAX_ESTIMATED_HOURS_PER_TASK, remainingHours);
+                    String splitTitle = title + " (Part " + i + "/" + partsCount + ")";
+                    taskService.createTaskInGroupWithHours(defaultGroup.getId(), splitTitle, splitHours, requesterUser);
+                    remainingHours -= splitHours;
+                }
+
+                String message = String.format(
+                        BotMessages.TASK_SPLIT_CREATED.getMessage(),
+                        estimatedHours,
+                        partsCount,
+                        requesterUser != null ? requesterUser.getName() : "Unknown"
+                );
+                sendMessageWithMainMenu(message);
+            }
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
-            BotHelper.sendMessageToTelegram(chatId, "Could not create task: " + e.getMessage(), telegramClient);
+            sendMessageWithMainMenu("Could not create task: " + e.getMessage());
         }
+        exit = true;
+    }
+
+    public void fnMoveSprint() {
+        if (exit || requestText == null) {
+            return;
+        }
+
+        Long pendingTaskId = getPendingMoveSprintTask();
+        String trimmedRequest = requestText.trim();
+        if (pendingTaskId != null && trimmedRequest.matches("^\\d+$")) {
+            try {
+                Long sprintId = Long.valueOf(trimmedRequest);
+                taskService.moveTaskToSprint(pendingTaskId, sprintId);
+                clearPendingMoveSprintTask();
+
+                Long groupId = lastViewedGroupByChat.get(chatId);
+                String message = String.format(BotMessages.TASK_SPRINT_CHANGED.getMessage(), pendingTaskId, sprintId);
+                if (groupId != null) {
+                    renderGroupTasksMenu(groupId, message);
+                } else {
+                    renderAllTasksMenu(message);
+                }
+            } catch (Exception e) {
+                logger.error(e.getLocalizedMessage(), e);
+                sendMessageWithMainMenu(BotMessages.TASK_SPRINT_NOT_FOUND.getMessage());
+            }
+
+            exit = true;
+            return;
+        }
+
+        String actionToken = resolveTaskActionToken();
+        if (actionToken != null && actionToken.startsWith(TASK_MOVE_PREFIX)) {
+            try {
+                Long taskId = Long.valueOf(actionToken.substring(TASK_MOVE_PREFIX.length()));
+                registerPendingMoveSprintTask(taskId);
+                sendMessageWithMainMenu(BotMessages.MOVE_SPRINT_PROMPT.getMessage() + " Task #" + taskId + ".");
+            } catch (Exception e) {
+                logger.error(e.getLocalizedMessage(), e);
+                sendMessageWithMainMenu(BotMessages.MOVE_SPRINT_FORMAT.getMessage());
+            }
+
+            exit = true;
+            return;
+        }
+
+        String normalizedLower = requestText.toLowerCase().trim();
+        if (!normalizedLower.startsWith(BotCommands.MOVE_SPRINT.getCommand())) {
+            return;
+        }
+
+        String payload = requestText.substring(BotCommands.MOVE_SPRINT.getCommand().length()).trim();
+        String[] parts = payload.split("\\s+");
+
+        if (parts.length < 2) {
+            sendMessageWithMainMenu(BotMessages.MOVE_SPRINT_FORMAT.getMessage());
+            exit = true;
+            return;
+        }
+
+        Long taskId;
+        Long sprintId;
+
+        try {
+            taskId = Long.parseLong(parts[0]);
+            sprintId = Long.parseLong(parts[1]);
+        } catch (NumberFormatException e) {
+            sendMessageWithMainMenu(BotMessages.MOVE_SPRINT_FORMAT.getMessage());
+            exit = true;
+            return;
+        }
+
+        try {
+            taskService.moveTaskToSprint(taskId, sprintId);
+            String message = String.format(BotMessages.TASK_SPRINT_CHANGED.getMessage(), taskId, sprintId);
+            sendMessageWithMainMenu(message);
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+            sendMessageWithMainMenu(BotMessages.TASK_SPRINT_NOT_FOUND.getMessage());
+        }
+
         exit = true;
     }
 
@@ -790,7 +1314,7 @@ public class BotActions{
         try {
             taskId = Long.parseLong(payload);
         } catch (NumberFormatException e) {
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.START_TASK_FORMAT.getMessage(), telegramClient);
+            sendMessageWithMainMenu(BotMessages.START_TASK_FORMAT.getMessage());
             exit = true;
             return;
         }
@@ -798,16 +1322,52 @@ public class BotActions{
         try {
             taskService.startTask(taskId);
             String message = String.format(BotMessages.TASK_STARTED.getMessage(), taskId);
-            BotHelper.sendMessageToTelegram(chatId, message, telegramClient);
+            sendMessageWithMainMenu(message);
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.TASK_NOT_FOUND.getMessage(), telegramClient);
+            sendMessageWithMainMenu(BotMessages.TASK_NOT_FOUND.getMessage());
         }
         exit = true;
     }
 
     public void fnCompleteTask() {
         if (exit || requestText == null) {
+            return;
+        }
+
+        Long pendingTaskId = getPendingCompleteTask();
+        String trimmedRequest = requestText.trim();
+        if (pendingTaskId != null && trimmedRequest.matches("^\\d+(?:[.,]\\d+)?$")) {
+            try {
+                Float actualHours = Float.parseFloat(trimmedRequest.replace(',', '.'));
+                if (actualHours <= 0 || actualHours > 40) {
+                    sendMessageWithMainMenu("Hours must be between 0.5 and 40.");
+                    exit = true;
+                    return;
+                }
+
+                taskService.completeTask(pendingTaskId, actualHours);
+                clearPendingCompleteTask();
+
+                Long groupId = lastViewedGroupByChat.get(chatId);
+                String message = String.format(BotMessages.TASK_COMPLETED.getMessage(), pendingTaskId, actualHours);
+                if (groupId != null) {
+                    renderGroupTasksMenu(groupId, message);
+                } else {
+                    renderAllTasksMenu(message);
+                }
+            } catch (Exception e) {
+                logger.error(e.getLocalizedMessage(), e);
+                sendMessageWithMainMenu(BotMessages.TASK_NOT_FOUND.getMessage());
+            }
+
+            exit = true;
+            return;
+        }
+
+        if (pendingTaskId != null) {
+            sendMessageWithMainMenu("Type the actual hours spent to finish Task #" + pendingTaskId + ".");
+            exit = true;
             return;
         }
 
@@ -820,7 +1380,7 @@ public class BotActions{
         String[] parts = payload.split("\\s+");
 
         if (parts.length < 2) {
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.COMPLETE_TASK_FORMAT.getMessage(), telegramClient);
+            sendMessageWithMainMenu(BotMessages.COMPLETE_TASK_FORMAT.getMessage());
             exit = true;
             return;
         }
@@ -832,12 +1392,12 @@ public class BotActions{
             taskId = Long.parseLong(parts[0]);
             actualHours = Float.parseFloat(parts[1]);
             if (actualHours <= 0 || actualHours > 40) {
-                BotHelper.sendMessageToTelegram(chatId, "Hours must be between 0.5 and 40.", telegramClient);
+                sendMessageWithMainMenu("Hours must be between 0.5 and 40.");
                 exit = true;
                 return;
             }
         } catch (NumberFormatException e) {
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.COMPLETE_TASK_FORMAT.getMessage(), telegramClient);
+            sendMessageWithMainMenu(BotMessages.COMPLETE_TASK_FORMAT.getMessage());
             exit = true;
             return;
         }
@@ -845,10 +1405,10 @@ public class BotActions{
         try {
             taskService.completeTask(taskId, actualHours);
             String message = String.format(BotMessages.TASK_COMPLETED.getMessage(), taskId, actualHours);
-            BotHelper.sendMessageToTelegram(chatId, message, telegramClient);
+            sendMessageWithMainMenu(message);
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
-            BotHelper.sendMessageToTelegram(chatId, BotMessages.TASK_NOT_FOUND.getMessage(), telegramClient);
+            sendMessageWithMainMenu(BotMessages.TASK_NOT_FOUND.getMessage());
         }
         exit = true;
     }

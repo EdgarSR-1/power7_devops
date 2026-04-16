@@ -8,6 +8,10 @@ public enum BotCommands {
 	REGISTER_USER("/registeruser"),
 	ADD_ITEM("/additem"),
 	ADD_TASK("/addtask"),
+	SPRINTS("/sprints"),
+	CREATE_SPRINT("/createsprint"),
+	MOVE_SPRINT("/movesprint"),
+	SPRINT_TASKS("/sprinttasks"),
 	START_TASK("/starttask"),
 	COMPLETE_TASK("/completetask"),
 	LLM_REQ("/llm");
