@@ -44,6 +44,10 @@ public class BotActions{
     private static final String TASK_MOVE_PREFIX = "TASKMOVE::";
     private static final float MAX_ESTIMATED_HOURS_PER_TASK = 4f;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final Pattern CREATE_SPRINT_COMMAND_PATTERN = Pattern.compile(
+            "^/?createsprint(?:@\\w+)?(?:\\s+.*)?$",
+            Pattern.CASE_INSENSITIVE
+    );
             private static final Pattern REGISTER_USER_PATTERN = Pattern.compile(
                 "^/?registeruser(?:@\\w+)?\\s+(.+?)\\s+([^\\s]+)\\s+([^\\s]+)\\s+([^\\s]+)\\s*$",
             Pattern.CASE_INSENSITIVE
@@ -895,7 +899,8 @@ public class BotActions{
                         .append("\n  Start: ")
                         .append(formatDateTime(sprint.getStartDate()))
                         .append(" | End: ")
-                        .append(formatDateTime(sprint.getEndDate()));
+                        .append(formatDateTime(sprint.getEndDate()))
+                        .append("\n");
             }
 
             sendMessageWithMainMenu(summary.toString());
@@ -913,19 +918,22 @@ public class BotActions{
         }
 
         String normalizedRequest = requestText.trim();
-        if (normalizedRequest.equals(BotLabels.CREATE_SPRINT.getLabel())) {
+        boolean isCreateSprintButton = normalizedRequest.equals(BotLabels.CREATE_SPRINT.getLabel());
+        boolean isCreateSprintCommand = CREATE_SPRINT_COMMAND_PATTERN.matcher(normalizedRequest).matches();
+        
+        // Only process if it's a sprint-related request
+        if (!isCreateSprintButton && !isCreateSprintCommand) {
+            return;
+        }
+
+        if (isCreateSprintButton) {
             sendMessageWithMainMenu(BotMessages.CREATE_SPRINT_FORMAT.getMessage());
             exit = true;
             return;
         }
 
-        String normalizedLower = requestText.toLowerCase().trim();
-        if (!normalizedLower.startsWith(BotCommands.CREATE_SPRINT.getCommand())) {
-            return;
-        }
-
-        String payload = requestText.substring(BotCommands.CREATE_SPRINT.getCommand().length()).trim();
-        String[] parts = payload.split("\\|");
+        String payload = normalizedRequest.replaceFirst("(?i)^/?createsprint(?:@\\w+)?\\s*", "");
+        String[] parts = payload.split("\\s*[|;]\\s*");
         if (parts.length < 3) {
             sendMessageWithMainMenu(BotMessages.CREATE_SPRINT_FORMAT.getMessage());
             exit = true;
