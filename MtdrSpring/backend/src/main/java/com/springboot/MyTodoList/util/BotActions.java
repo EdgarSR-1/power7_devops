@@ -142,6 +142,60 @@ public class BotActions{
         return chatActions.get(requestText);
     }
 
+    private String statusTag(TaskStatus status) {
+        if (status == null) {
+            return "[PENDING]";
+        }
+        switch (status) {
+            case completed:
+                return "[COMPLETED]";
+            case in_progress:
+                return "[IN_PROGRESS]";
+            case pending:
+            default:
+                return "[PENDING]";
+        }
+    }
+
+    private String statusTagFromString(String statusValue) {
+        if (statusValue == null) {
+            return statusTag(TaskStatus.pending);
+        }
+        try {
+            return statusTag(TaskStatus.valueOf(statusValue));
+        } catch (Exception ignored) {
+            return "[PENDING]";
+        }
+    }
+
+    private String buildGroupStatusSummary(List<Task> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return "\n\nNo tasks in this group yet.";
+        }
+
+        long pendingCount = tasks.stream().filter(task -> task.getStatus() == TaskStatus.pending).count();
+        long inProgressCount = tasks.stream().filter(task -> task.getStatus() == TaskStatus.in_progress).count();
+        long completedCount = tasks.stream().filter(task -> task.getStatus() == TaskStatus.completed).count();
+
+        StringBuilder summary = new StringBuilder();
+        summary.append("\n\nStatus Summary")
+                .append("\nPENDING: ").append(pendingCount)
+                .append("\nIN_PROGRESS: ").append(inProgressCount)
+                .append("\nCOMPLETED: ").append(completedCount)
+                .append("\n\nTasks:");
+
+        for (Task task : tasks) {
+            summary.append("\n#")
+                    .append(task.getId())
+                    .append(" ")
+                    .append(statusTag(task.getStatus()))
+                    .append(" ")
+                    .append(task.getTitle());
+        }
+
+        return summary.toString();
+    }
+
     private void renderAllTasksMenu(String titleMessage) {
         lastViewedGroupByChat.remove(chatId);
         clearTaskActionButtons();
@@ -176,7 +230,7 @@ public class BotActions{
 
             for (TaskResponseDTO task : groupEntry.getValue()) {
                 KeyboardRow taskRow = new KeyboardRow();
-                taskRow.add(task.getTitle());
+                taskRow.add(statusTagFromString(task.getStatus()) + " " + task.getTitle());
                 String status = task.getStatus() != null ? task.getStatus() : TaskStatus.pending.name();
                 if (TaskStatus.completed.name().equals(status)) {
                     taskRow.add(registerTaskActionButton("Undo #" + task.getId(), TASK_UNDO_PREFIX + task.getId()));
@@ -225,21 +279,21 @@ public class BotActions{
 
         for (Task task : activeTasks) {
             KeyboardRow row = new KeyboardRow();
-            row.add(task.getTitle());
+            row.add(statusTag(task.getStatus()) + " " + task.getTitle());
             row.add(registerTaskActionButton("Done #" + task.getId(), TASK_DONE_PREFIX + task.getId()));
             keyboard.add(row);
         }
 
         for (Task task : doneTasks) {
             KeyboardRow row = new KeyboardRow();
-            row.add(task.getTitle());
+            row.add(statusTag(task.getStatus()) + " " + task.getTitle());
             row.add(registerTaskActionButton("Undo #" + task.getId(), TASK_UNDO_PREFIX + task.getId()));
             row.add(registerTaskActionButton("Delete #" + task.getId(), TASK_DELETE_PREFIX + task.getId()));
             keyboard.add(row);
         }
 
         keyboardMarkup.setKeyboard(keyboard);
-        BotHelper.sendMessageToTelegram(chatId, titleMessage, telegramClient, keyboardMarkup);
+        BotHelper.sendMessageToTelegram(chatId, titleMessage + buildGroupStatusSummary(groupTasks), telegramClient, keyboardMarkup);
     }
 
 
@@ -658,6 +712,145 @@ public class BotActions{
             BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_TASK_TITLE.getMessage(), telegramClient, null);
             exit = true;
         }
+    }
+
+    public void fnAddTask() {
+        if (exit || requestText == null) {
+            return;
+        }
+
+        String normalizedLower = requestText.toLowerCase().trim();
+        if (!normalizedLower.startsWith(BotCommands.ADD_TASK.getCommand())) {
+            return;
+        }
+
+        String payload = requestText.substring(BotCommands.ADD_TASK.getCommand().length()).trim();
+        String[] parts = payload.split("\\s+");
+        
+        if (parts.length < 2) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.ADD_TASK_FORMAT.getMessage(), telegramClient);
+            exit = true;
+            return;
+        }
+
+        Float estimatedHours = null;
+        try {
+            estimatedHours = Float.parseFloat(parts[parts.length - 1]);
+            if (estimatedHours <= 0 || estimatedHours > 40) {
+                BotHelper.sendMessageToTelegram(chatId, "Hours must be between 0.5 and 40.", telegramClient);
+                exit = true;
+                return;
+            }
+        } catch (NumberFormatException e) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_HOURS.getMessage(), telegramClient);
+            exit = true;
+            return;
+        }
+
+        String title = payload.substring(0, payload.lastIndexOf(String.valueOf(estimatedHours))).trim();
+        if (title.isEmpty()) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.ADD_TASK_FORMAT.getMessage(), telegramClient);
+            exit = true;
+            return;
+        }
+
+        try {
+            List<TaskGroup> groups = taskGroupService.findAll();
+            if (groups.isEmpty()) {
+                BotHelper.sendMessageToTelegram(chatId, "No groups found. Create one first.", telegramClient);
+                exit = true;
+                return;
+            }
+            
+            TaskGroup defaultGroup = groups.get(0);
+            taskService.createTaskInGroupWithHours(defaultGroup.getId(), title, estimatedHours);
+            String message = String.format(BotMessages.TASK_ADDED_WITH_HOURS.getMessage(), 
+                    estimatedHours, requesterUser != null ? requesterUser.getName() : "Unknown");
+            BotHelper.sendMessageToTelegram(chatId, message, telegramClient);
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+            BotHelper.sendMessageToTelegram(chatId, "Could not create task: " + e.getMessage(), telegramClient);
+        }
+        exit = true;
+    }
+
+    public void fnStartTask() {
+        if (exit || requestText == null) {
+            return;
+        }
+
+        String normalizedLower = requestText.toLowerCase().trim();
+        if (!normalizedLower.startsWith(BotCommands.START_TASK.getCommand())) {
+            return;
+        }
+
+        String payload = requestText.substring(BotCommands.START_TASK.getCommand().length()).trim();
+        Long taskId;
+
+        try {
+            taskId = Long.parseLong(payload);
+        } catch (NumberFormatException e) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.START_TASK_FORMAT.getMessage(), telegramClient);
+            exit = true;
+            return;
+        }
+
+        try {
+            taskService.startTask(taskId);
+            String message = String.format(BotMessages.TASK_STARTED.getMessage(), taskId);
+            BotHelper.sendMessageToTelegram(chatId, message, telegramClient);
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.TASK_NOT_FOUND.getMessage(), telegramClient);
+        }
+        exit = true;
+    }
+
+    public void fnCompleteTask() {
+        if (exit || requestText == null) {
+            return;
+        }
+
+        String normalizedLower = requestText.toLowerCase().trim();
+        if (!normalizedLower.startsWith(BotCommands.COMPLETE_TASK.getCommand())) {
+            return;
+        }
+
+        String payload = requestText.substring(BotCommands.COMPLETE_TASK.getCommand().length()).trim();
+        String[] parts = payload.split("\\s+");
+
+        if (parts.length < 2) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.COMPLETE_TASK_FORMAT.getMessage(), telegramClient);
+            exit = true;
+            return;
+        }
+
+        Long taskId;
+        Float actualHours;
+
+        try {
+            taskId = Long.parseLong(parts[0]);
+            actualHours = Float.parseFloat(parts[1]);
+            if (actualHours <= 0 || actualHours > 40) {
+                BotHelper.sendMessageToTelegram(chatId, "Hours must be between 0.5 and 40.", telegramClient);
+                exit = true;
+                return;
+            }
+        } catch (NumberFormatException e) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.COMPLETE_TASK_FORMAT.getMessage(), telegramClient);
+            exit = true;
+            return;
+        }
+
+        try {
+            taskService.completeTask(taskId, actualHours);
+            String message = String.format(BotMessages.TASK_COMPLETED.getMessage(), taskId, actualHours);
+            BotHelper.sendMessageToTelegram(chatId, message, telegramClient);
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.TASK_NOT_FOUND.getMessage(), telegramClient);
+        }
+        exit = true;
     }
 
     public void fnLLM(){

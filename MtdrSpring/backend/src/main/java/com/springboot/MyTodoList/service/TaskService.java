@@ -159,6 +159,45 @@ public class TaskService {
         return mapToResponseDTO(taskRepository.save(task));
     }
 
+    public TaskResponseDTO createTaskInGroupWithHours(Long groupId, String title, Float estimatedHours) {
+        TaskGroup group = taskGroupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("TaskGroup not found"));
+
+        TodoList targetList = todoListRepository.findByGroupId(groupId).stream().findFirst().orElseGet(() -> {
+            TodoList createdList = new TodoList();
+            createdList.setGroup(group);
+            createdList.setName("General");
+            createdList.setCreatedBy(group.getCreatedBy());
+            return todoListRepository.save(createdList);
+        });
+
+        Task task = new Task();
+        task.setTodoList(targetList);
+        task.setTitle(title);
+        task.setDescription(title);
+        task.setStatus(TaskStatus.pending);
+        task.setPriority(TaskPriority.medium);
+        task.setCreatedBy(group.getCreatedBy());
+        task.setEstimatedHours(estimatedHours != null ? estimatedHours : 1f);
+
+        return mapToResponseDTO(taskRepository.save(task));
+    }
+
+    public TaskResponseDTO startTask(Long taskId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+        task.setStatus(TaskStatus.in_progress);
+        return mapToResponseDTO(taskRepository.save(task));
+    }
+
+    public TaskResponseDTO completeTask(Long taskId, Float actualHours) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+        task.setStatus(TaskStatus.completed);
+        task.setActualHours(actualHours);
+        return mapToResponseDTO(taskRepository.save(task));
+    }
+
     private TaskResponseDTO mapToResponseDTO(Task task) {
     String assigneeName = task.getCreatedBy() != null ? task.getCreatedBy().getName() : null;
     String todoListName = task.getTodoList() != null ? task.getTodoList().getName() : null;

@@ -41,6 +41,13 @@ public class Task {
     private LocalDateTime dueDate;
 
     // FK -> users(id)
+    @Column(name = "estimated_hours")
+    private Float estimatedHours;
+
+    @Column(name = "actual_hours")
+    private Float actualHours;
+
+    // FK -> users(id), nullable
     @ManyToOne
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -85,6 +92,8 @@ public class Task {
         this.createdBy = createdBy;
         this.sprint = sprint;
         this.createdAt = createdAt;
+        this.estimatedHours = null;
+        this.actualHours = null;
     }
 
     // ===== GETTERS & SETTERS =====
@@ -183,5 +192,21 @@ public class Task {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Float getEstimatedHours() {
+        return estimatedHours;
+    }
+
+    public void setEstimatedHours(Float estimatedHours) {
+        this.estimatedHours = estimatedHours;
+    }
+
+    public Float getActualHours() {
+        return actualHours;
+    }
+
+    public void setActualHours(Float actualHours) {
+        this.actualHours = actualHours;
     }
 }
