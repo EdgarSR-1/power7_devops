@@ -932,16 +932,10 @@ public class BotActions{
             return;
         }
 
-        logger.info("DEBUG fnCreateSprint: Processing request: '{}'", normalizedRequest);
-        
         String payload = normalizedRequest.replaceFirst("(?i)^/?createsprint(?:@\\w+)?\\s*", "");
-        logger.info("DEBUG fnCreateSprint: Payload after stripping command: '{}'", payload);
-        
         String[] parts = payload.split("\\s*[|;]\\s*");
-        logger.info("DEBUG fnCreateSprint: Parts count: {}, parts: {}", parts.length, java.util.Arrays.toString(parts));
         
         if (parts.length < 3) {
-            logger.warn("DEBUG fnCreateSprint: Invalid parts count. Expected 3, got {}", parts.length);
             sendMessageWithMainMenu(BotMessages.CREATE_SPRINT_FORMAT.getMessage());
             exit = true;
             return;
@@ -950,18 +944,12 @@ public class BotActions{
         String name = parts[0].trim();
         String startText = parts[1].trim();
         String endText = parts[2].trim();
-        
-        logger.info("DEBUG fnCreateSprint: Parsed name='{}', startText='{}', endText='{}'", name, startText, endText);
 
         try {
             LocalDateTime startDate = LocalDateTime.parse(startText, DATE_TIME_FORMATTER);
-            logger.info("DEBUG fnCreateSprint: Parsed startDate: {}", startDate);
-            
             LocalDateTime endDate = LocalDateTime.parse(endText, DATE_TIME_FORMATTER);
-            logger.info("DEBUG fnCreateSprint: Parsed endDate: {}", endDate);
 
             if (endDate.isBefore(startDate)) {
-                logger.warn("DEBUG fnCreateSprint: End date is before start date");
                 sendMessageWithMainMenu("Sprint end date cannot be before start date.");
                 exit = true;
                 return;
@@ -971,27 +959,19 @@ public class BotActions{
             sprintRequest.setName(name);
             sprintRequest.setStartDate(startDate);
             sprintRequest.setEndDate(endDate);
-            logger.info("DEBUG fnCreateSprint: DTO created: name='{}', start={}, end={}", 
-                    sprintRequest.getName(), sprintRequest.getStartDate(), sprintRequest.getEndDate());
 
-            logger.info("DEBUG fnCreateSprint: About to call sprintService.createSprint()");
             Sprint createdSprint = sprintService.createSprint(sprintRequest);
-            logger.info("DEBUG fnCreateSprint: Sprint created successfully: id={}, name='{}'", 
-                    createdSprint.getId(), createdSprint.getName());
 
             String message = String.format(BotMessages.SPRINT_CREATED.getMessage(), createdSprint.getName(), createdSprint.getId());
             sendMessageWithMainMenu(message);
         } catch (java.time.format.DateTimeParseException dte) {
-            logger.error("DEBUG fnCreateSprint: Date parse error - {}", dte.getMessage(), dte);
             sendMessageWithMainMenu("Invalid date format. Use yyyy-MM-dd HH:mm (e.g., 2026-04-15 09:00)");
             exit = true;
         } catch (RuntimeException re) {
-            logger.error("DEBUG fnCreateSprint: Service validation error - {}", re.getMessage(), re);
             sendMessageWithMainMenu("Sprint creation failed: " + re.getMessage());
             exit = true;
         } catch (Exception e) {
-            logger.error("DEBUG fnCreateSprint: Unexpected error - {}", e.getMessage(), e);
-            sendMessageWithMainMenu("Unexpected error creating sprint: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+            sendMessageWithMainMenu("Unexpected error creating sprint: " + e.getMessage());
             exit = true;
         }
     }
