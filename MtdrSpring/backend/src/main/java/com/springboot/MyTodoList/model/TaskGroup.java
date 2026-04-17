@@ -20,6 +20,9 @@ public class TaskGroup {
 
     private String name;
 
+    @Column(name = "description", length = 255)
+    private String description;
+
     @ManyToOne
     @JoinColumn(name = "created_by")
     private User createdBy;
@@ -30,9 +33,10 @@ public class TaskGroup {
     public TaskGroup() {
     }
 
-    public TaskGroup(Long id, String name, User createdBy, LocalDateTime createdAt) {
+    public TaskGroup(Long id, String name, String description, User createdBy, LocalDateTime createdAt) {
         this.id = id;
         this.name = name;
+        this.description = description;
         this.createdBy = createdBy;
         this.createdAt = createdAt;
     }
@@ -51,6 +55,14 @@ public class TaskGroup {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public User getCreatedBy() {

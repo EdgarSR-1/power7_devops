@@ -9,10 +9,12 @@ import com.springboot.MyTodoList.model.TaskStatus;
 import com.springboot.MyTodoList.model.TodoList;
 import com.springboot.MyTodoList.model.User;
 import com.springboot.MyTodoList.repository.TaskGroupRepository;
+import com.springboot.MyTodoList.repository.TaskAssignmentRepository;
 import com.springboot.MyTodoList.repository.TaskRepository;
 import com.springboot.MyTodoList.repository.TodoListRepository;
 import com.springboot.MyTodoList.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
@@ -24,15 +26,18 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final TodoListRepository todoListRepository;
     private final TaskGroupRepository taskGroupRepository;
+    private final TaskAssignmentRepository taskAssignmentRepository;
     private final UserRepository userRepository;
 
     public TaskService(TaskRepository taskRepository,
                        TodoListRepository todoListRepository,
                        TaskGroupRepository taskGroupRepository,
+                       TaskAssignmentRepository taskAssignmentRepository,
                        UserRepository userRepository) {
         this.taskRepository = taskRepository;
         this.todoListRepository = todoListRepository;
         this.taskGroupRepository = taskGroupRepository;
+        this.taskAssignmentRepository = taskAssignmentRepository;
         this.userRepository = userRepository;
     }
 
@@ -91,7 +96,13 @@ public class TaskService {
         return mapToResponseDTO(taskRepository.save(task));
     }
 
+    @Transactional
     public void deleteTask(Long taskId) {
+        if (!taskRepository.existsById(taskId)) {
+            throw new RuntimeException("Task not found");
+        }
+
+        taskAssignmentRepository.deleteByTaskId(taskId);
         taskRepository.deleteById(taskId);
     }
 

@@ -1,5 +1,10 @@
 package com.springboot.MyTodoList.controller;
 
+import com.springboot.MyTodoList.dto.CreateGroupTaskRequestDTO;
+import com.springboot.MyTodoList.dto.GroupTaskDTO;
+import com.springboot.MyTodoList.dto.TaskGroupDetailDTO;
+import com.springboot.MyTodoList.dto.TaskGroupRequestDTO;
+import com.springboot.MyTodoList.dto.TaskGroupSummaryDTO;
 import com.springboot.MyTodoList.model.TaskGroup;
 import com.springboot.MyTodoList.service.TaskGroupService;
 
@@ -26,6 +31,34 @@ public class TaskGroupController {
         return ResponseEntity.ok(service.findAll());
     }
 
+    @GetMapping("/summary")
+    public ResponseEntity<List<TaskGroupSummaryDTO>> getSummaries() {
+        return ResponseEntity.ok(service.getSummaries());
+    }
+
+    @GetMapping("/{id}/detail")
+    public ResponseEntity<TaskGroupDetailDTO> getDetail(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(service.getDetail(id));
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/{id}/tasks")
+    public ResponseEntity<?> createTask(
+            @PathVariable Long id,
+            @RequestBody CreateGroupTaskRequestDTO task) {
+        try {
+            GroupTaskDTO saved = service.createTask(id, task);
+            return new ResponseEntity<>(saved, HttpStatus.CREATED);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     // GET task group by ID
     @GetMapping("/{id}")
     public ResponseEntity<TaskGroup> getById(@PathVariable Long id) {
@@ -39,9 +72,13 @@ public class TaskGroupController {
 
     // POST create task group (manual user)
     @PostMapping
-    public ResponseEntity<TaskGroup> create(@RequestBody TaskGroup group) {
-        TaskGroup saved = service.save(group);
-        return new ResponseEntity<>(saved, HttpStatus.CREATED);
+    public ResponseEntity<?> create(@RequestBody TaskGroupRequestDTO group) {
+        try {
+            TaskGroupSummaryDTO saved = service.createGroup(group);
+            return new ResponseEntity<>(saved, HttpStatus.CREATED);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
     // POST create task group using bot owner
