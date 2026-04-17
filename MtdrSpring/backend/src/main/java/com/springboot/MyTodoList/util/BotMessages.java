@@ -28,7 +28,7 @@ public enum BotMessages {
 	SPRINTS_FORMAT("Format: /sprints to list all sprints\nUse /createsprint Sprint 5;2026-04-15 09:00;2026-04-29 18:00 to create one"),
 	NO_SPRINTS_FOUND("No sprints found. Create one with /createsprint Sprint 5;2026-04-15 09:00;2026-04-29 18:00"),
 	SPRINT_CREATED("Sprint created successfully: %s (#%s)"),
-	CREATE_SPRINT_FORMAT("Format: /createsprint <name>;<start yyyy-MM-dd HH:mm>;<end yyyy-MM-dd HH:mm>\\nExample: /createsprint Sprint 5;2026-04-15 09:00;2026-04-29 18:00\\nTip: you can also use | instead of ;"),
+	CREATE_SPRINT_FORMAT("Format: /createsprint <name>;<start>;<end>[;<groupId>]\nExample: /createsprint Sprint 5;2026-04-15 09:00;2026-04-29 18:00;1\nSupported date formats: yyyy-MM-dd HH:mm, yyyy-MM-dd'T'HH:mm, dd/MM/yyyy HH:mm, yyyy-MM-dd\nTip: you can also use | instead of ;\nIf groupId is omitted, the bot uses the first existing group."),
 	MOVE_SPRINT_FORMAT("Format: /movesprint [task_id] [sprint_id]\nExample: /movesprint 42 3"),
 	MOVE_SPRINT_PROMPT("Type the destination sprint ID and press send."),
 	TASK_SPRINT_CHANGED("Task %s moved to sprint %s."),

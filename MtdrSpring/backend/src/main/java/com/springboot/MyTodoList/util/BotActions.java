@@ -24,7 +24,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -44,6 +46,9 @@ public class BotActions{
     private static final String TASK_MOVE_PREFIX = "TASKMOVE::";
     private static final float MAX_ESTIMATED_HOURS_PER_TASK = 4f;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter DATE_TIME_ISO_MINUTES_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+    private static final DateTimeFormatter DATE_TIME_SLASH_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final DateTimeFormatter DATE_ONLY_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final Pattern CREATE_SPRINT_COMMAND_PATTERN = Pattern.compile(
             "^/?createsprint(?:@\\w+)?(?:\\s+.*)?$",
             Pattern.CASE_INSENSITIVE
@@ -62,6 +67,7 @@ public class BotActions{
                 );
     private static final Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, String> pendingTaskTitleByChat = new ConcurrentHashMap<>();
+    private static final Map<Long, Boolean> pendingCreateSprintByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> pendingMoveSprintTaskByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> pendingCompleteTaskByChat = new ConcurrentHashMap<>();
@@ -212,6 +218,42 @@ public class BotActions{
 
     private void clearPendingCompleteTask() {
         pendingCompleteTaskByChat.remove(chatId);
+    }
+
+    private boolean isPendingCreateSprint() {
+        return pendingCreateSprintByChat.containsKey(chatId);
+    }
+
+    private void setPendingCreateSprint(boolean pending) {
+        if (pending) {
+            pendingCreateSprintByChat.put(chatId, Boolean.TRUE);
+            return;
+        }
+        pendingCreateSprintByChat.remove(chatId);
+    }
+
+    private LocalDateTime parseSprintDateTime(String rawValue, boolean isEndDate) {
+        String value = rawValue != null ? rawValue.trim() : "";
+        if (value.isEmpty()) {
+            throw new DateTimeParseException("Empty date", value, 0);
+        }
+
+        DateTimeFormatter[] dateTimeFormatters = new DateTimeFormatter[] {
+                DATE_TIME_FORMATTER,
+                DATE_TIME_ISO_MINUTES_FORMATTER,
+                DATE_TIME_SLASH_FORMATTER
+        };
+
+        for (DateTimeFormatter formatter : dateTimeFormatters) {
+            try {
+                return LocalDateTime.parse(value, formatter);
+            } catch (DateTimeParseException ignored) {
+                // Try next supported format.
+            }
+        }
+
+        LocalDate parsedDate = LocalDate.parse(value, DATE_ONLY_FORMATTER);
+        return isEndDate ? parsedDate.atTime(23, 59) : parsedDate.atStartOfDay();
     }
 
     private String statusTag(TaskStatus status) {
@@ -918,24 +960,28 @@ public class BotActions{
         }
 
         String normalizedRequest = requestText.trim();
+        boolean pendingCreateSprint = isPendingCreateSprint();
         boolean isCreateSprintButton = normalizedRequest.equals(BotLabels.CREATE_SPRINT.getLabel());
         boolean isCreateSprintCommand = CREATE_SPRINT_COMMAND_PATTERN.matcher(normalizedRequest).matches();
         
-        // Only process if it's a sprint-related request
-        if (!isCreateSprintButton && !isCreateSprintCommand) {
+        if (!pendingCreateSprint && !isCreateSprintButton && !isCreateSprintCommand) {
             return;
         }
 
         if (isCreateSprintButton) {
+            setPendingCreateSprint(true);
             sendMessageWithMainMenu(BotMessages.CREATE_SPRINT_FORMAT.getMessage());
             exit = true;
             return;
         }
 
-        String payload = normalizedRequest.replaceFirst("(?i)^/?createsprint(?:@\\w+)?\\s*", "");
+        String payload = isCreateSprintCommand
+                ? normalizedRequest.replaceFirst("(?i)^/?createsprint(?:@\\w+)?\\s*", "")
+                : normalizedRequest;
         String[] parts = payload.split("\\s*[|;]\\s*");
         
         if (parts.length < 3) {
+            setPendingCreateSprint(true);
             sendMessageWithMainMenu(BotMessages.CREATE_SPRINT_FORMAT.getMessage());
             exit = true;
             return;
@@ -944,10 +990,22 @@ public class BotActions{
         String name = parts[0].trim();
         String startText = parts[1].trim();
         String endText = parts[2].trim();
+        Long groupId = null;
+
+        if (parts.length >= 4 && parts[3] != null && !parts[3].trim().isEmpty()) {
+            try {
+                groupId = Long.valueOf(parts[3].trim());
+            } catch (NumberFormatException nfe) {
+                setPendingCreateSprint(true);
+                sendMessageWithMainMenu("Invalid groupId. Use a numeric value as optional 4th field.");
+                exit = true;
+                return;
+            }
+        }
 
         try {
-            LocalDateTime startDate = LocalDateTime.parse(startText, DATE_TIME_FORMATTER);
-            LocalDateTime endDate = LocalDateTime.parse(endText, DATE_TIME_FORMATTER);
+            LocalDateTime startDate = parseSprintDateTime(startText, false);
+            LocalDateTime endDate = parseSprintDateTime(endText, true);
 
             if (endDate.isBefore(startDate)) {
                 sendMessageWithMainMenu("Sprint end date cannot be before start date.");
@@ -959,18 +1017,24 @@ public class BotActions{
             sprintRequest.setName(name);
             sprintRequest.setStartDate(startDate);
             sprintRequest.setEndDate(endDate);
+            sprintRequest.setGroupId(groupId);
 
             Sprint createdSprint = sprintService.createSprint(sprintRequest);
 
             String message = String.format(BotMessages.SPRINT_CREATED.getMessage(), createdSprint.getName(), createdSprint.getId());
             sendMessageWithMainMenu(message);
-        } catch (java.time.format.DateTimeParseException dte) {
-            sendMessageWithMainMenu("Invalid date format. Use yyyy-MM-dd HH:mm (e.g., 2026-04-15 09:00)");
+            setPendingCreateSprint(false);
+            exit = true;
+        } catch (DateTimeParseException dte) {
+            setPendingCreateSprint(true);
+            sendMessageWithMainMenu("Invalid date format. Use one of: yyyy-MM-dd HH:mm, yyyy-MM-dd'T'HH:mm, dd/MM/yyyy HH:mm, or yyyy-MM-dd.");
             exit = true;
         } catch (RuntimeException re) {
+            setPendingCreateSprint(true);
             sendMessageWithMainMenu("Sprint creation failed: " + re.getMessage());
             exit = true;
         } catch (Exception e) {
+            setPendingCreateSprint(true);
             sendMessageWithMainMenu("Unexpected error creating sprint: " + e.getMessage());
             exit = true;
         }

@@ -2,7 +2,9 @@ package com.springboot.MyTodoList.service;
 
 import com.springboot.MyTodoList.dto.SprintRequestDTO;
 import com.springboot.MyTodoList.model.Sprint;
+import com.springboot.MyTodoList.model.TaskGroup;
 import com.springboot.MyTodoList.repository.SprintRepository;
+import com.springboot.MyTodoList.repository.TaskGroupRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -12,9 +14,11 @@ import java.util.List;
 public class SprintService {
 
     private final SprintRepository sprintRepository;
+    private final TaskGroupRepository taskGroupRepository;
 
-    public SprintService(SprintRepository sprintRepository) {
+    public SprintService(SprintRepository sprintRepository, TaskGroupRepository taskGroupRepository) {
         this.sprintRepository = sprintRepository;
+        this.taskGroupRepository = taskGroupRepository;
     }
 
     public List<Sprint> findAll() {
@@ -48,7 +52,18 @@ public class SprintService {
         sprint.setName(dto.getName().trim());
         sprint.setStartDate(dto.getStartDate());
         sprint.setEndDate(dto.getEndDate());
-        sprint.setGroupId(null);  // No group association for sprints
+
+        Long resolvedGroupId = dto.getGroupId();
+        if (resolvedGroupId != null) {
+            TaskGroup group = taskGroupRepository.findById(resolvedGroupId)
+                    .orElseThrow(() -> new RuntimeException("Group not found: " + resolvedGroupId));
+            sprint.setGroupId(group.getId());
+        } else {
+            Long defaultGroupId = taskGroupRepository.findFirstByOrderByIdAsc()
+                    .map(TaskGroup::getId)
+                    .orElseThrow(() -> new RuntimeException("No task groups found. Create a group before creating sprints, or pass groupId."));
+            sprint.setGroupId(defaultGroupId);
+        }
         
         return sprintRepository.save(sprint);
     }

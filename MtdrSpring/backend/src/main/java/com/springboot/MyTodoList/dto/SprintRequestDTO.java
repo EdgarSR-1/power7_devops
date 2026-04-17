@@ -6,6 +6,7 @@ public class SprintRequestDTO {
     private String name;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
+    private Long groupId;
 
     public SprintRequestDTO() {
     }
@@ -32,5 +33,13 @@ public class SprintRequestDTO {
 
     public void setEndDate(LocalDateTime endDate) {
         this.endDate = endDate;
+    }
+
+    public Long getGroupId() {
+        return groupId;
+    }
+
+    public void setGroupId(Long groupId) {
+        this.groupId = groupId;
     }
 }
