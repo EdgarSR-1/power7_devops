@@ -14,4 +14,9 @@ public interface SprintRepository extends JpaRepository<Sprint, Long> {
             LocalDateTime taskStartDate,
             LocalDateTime taskEndDate
     );
+
+        Optional<Sprint> findFirstByStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(
+            LocalDateTime currentDateTimeStart,
+            LocalDateTime currentDateTimeEnd
+        );
 }

@@ -1,0 +1,15 @@
+FROM eclipse-temurin:21-jre
+
+RUN mkdir -p /mtdrworkshop/creds /opt/app
+
+COPY wallet/ /mtdrworkshop/creds
+
+WORKDIR /opt/app
+
+EXPOSE 8080
+
+COPY target/MyTodoList-0.0.1-SNAPSHOT.jar MyTodoList.jar
+
+# Runtime configuration must be provided via environment variables or an env file.
+# Example: --env-file .env.local
+ENTRYPOINT ["java", "-jar", "MyTodoList.jar"]
