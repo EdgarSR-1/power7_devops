@@ -33,4 +33,14 @@ public class TaskController {
     public TaskResponseDTO getTaskById(@PathVariable Long id) {
         return taskService.getTaskById(id);
     }
+
+    @PutMapping("/{id}")
+    public TaskResponseDTO updateTask(@PathVariable Long id, @RequestBody TaskRequestDTO dto) {
+        return taskService.updateTask(id, dto);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteTask(@PathVariable Long id) {
+        taskService.deleteTask(id);
+    }
 }

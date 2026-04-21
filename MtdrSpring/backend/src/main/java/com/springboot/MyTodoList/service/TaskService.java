@@ -84,6 +84,45 @@ public class TaskService {
         return mapToResponseDTO(task);
     }
 
+    public TaskResponseDTO updateTask(Long taskId, TaskRequestDTO dto) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        if (dto.getListId() != null) {
+            TodoList todoList = todoListRepository.findById(dto.getListId())
+                    .orElseThrow(() -> new RuntimeException("TodoList not found"));
+            task.setTodoList(todoList);
+        }
+
+        if (dto.getTitle() != null) {
+            task.setTitle(dto.getTitle());
+        }
+
+        if (dto.getDescription() != null) {
+            task.setDescription(dto.getDescription());
+        }
+
+        if (dto.getStatus() != null) {
+            task.setStatus(TaskStatus.valueOf(dto.getStatus()));
+        }
+
+        if (dto.getPriority() != null) {
+            task.setPriority(TaskPriority.valueOf(dto.getPriority()));
+        }
+
+        if (dto.getDueDate() != null) {
+            task.setDueDate(dto.getDueDate());
+        }
+
+        if (dto.getCreatedById() != null) {
+            User createdBy = userRepository.findById(dto.getCreatedById())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            task.setCreatedBy(createdBy);
+        }
+
+        return mapToResponseDTO(taskRepository.save(task));
+    }
+
     public TaskResponseDTO updateTaskStatus(Long taskId, TaskStatus status) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found"));

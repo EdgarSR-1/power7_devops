@@ -10,5 +10,5 @@ docker rm -f "$container_name" 2>/dev/null || true
 docker rmi "$image_name" 2>/dev/null || true
 
 mvn clean verify
-docker build -f Dockerfile --platform linux/amd64 -t "$image_name" .
+docker build -f DockerfileDev --platform linux/amd64 -t "$image_name" .
 docker run --name "$container_name" --volume "${PWD}/target:/tmp/target:rw" -p 8080:8080 -d "$image_name"
