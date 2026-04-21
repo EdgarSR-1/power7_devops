@@ -8,8 +8,11 @@ public class TaskRequestDTO {
     private String description;
     private String status;
     private String priority;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
     private LocalDateTime dueDate;
     private Long createdById;
+    private Long sprintId;
 
     public TaskRequestDTO() {
     }
@@ -54,6 +57,22 @@ public class TaskRequestDTO {
         this.priority = priority;
     }
 
+    public LocalDateTime getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDateTime startDate) {
+        this.startDate = startDate;
+    }
+
+    public LocalDateTime getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDateTime endDate) {
+        this.endDate = endDate;
+    }
+
     public LocalDateTime getDueDate() {
         return dueDate;
     }
@@ -68,5 +87,13 @@ public class TaskRequestDTO {
 
     public void setCreatedById(Long createdById) {
         this.createdById = createdById;
+    }
+
+    public Long getSprintId() {
+        return sprintId;
+    }
+
+    public void setSprintId(Long sprintId) {
+        this.sprintId = sprintId;
     }
 }
