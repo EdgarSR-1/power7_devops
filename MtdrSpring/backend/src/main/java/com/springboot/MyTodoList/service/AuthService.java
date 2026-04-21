@@ -53,6 +53,12 @@ public class AuthService {
 
         boolean matches = passwordEncoder.matches(request.getPassword(), user.getPassword());
 
+        if (!matches && request.getPassword().equals(user.getPassword())) {
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            userRepository.save(user);
+            matches = true;
+        }
+
         if (!matches) {
             throw new RuntimeException("Invalid email or password");
         }

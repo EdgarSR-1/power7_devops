@@ -3,6 +3,7 @@ package com.springboot.MyTodoList.service;
 import com.springboot.MyTodoList.model.User;
 import com.springboot.MyTodoList.model.UserType;
 import com.springboot.MyTodoList.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,9 +14,11 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository repo;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository repo) {
+    public UserService(UserRepository repo, PasswordEncoder passwordEncoder) {
         this.repo = repo;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public List<User> getAllUsers() {
@@ -29,7 +32,7 @@ public class UserService {
 
         String name = normalizeRequired(user.getName(), "Name is required");
         String email = normalizeRequired(user.getEmail(), "Email is required").toLowerCase(Locale.ROOT);
-        String password = normalizeRequired(user.getPassword(), "Password is required");
+        String password = encodePasswordIfNeeded(normalizeRequired(user.getPassword(), "Password is required"));
         String phone = normalizePhoneRequired(user.getPhone(), "Phone is required");
         Long telegramUserId = user.getTelegramUserId();
         Long telegramChatId = user.getTelegramChatId();
@@ -168,5 +171,13 @@ public class UserService {
                 throw new RuntimeException("Email already exists");
             }
         }
+    }
+
+    private String encodePasswordIfNeeded(String password) {
+        if (password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$")) {
+            return password;
+        }
+
+        return passwordEncoder.encode(password);
     }
 }

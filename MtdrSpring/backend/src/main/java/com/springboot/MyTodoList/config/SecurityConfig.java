@@ -11,8 +11,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.http.HttpMethod;
 
 @Configuration
 public class SecurityConfig {
@@ -44,7 +42,19 @@ public class SecurityConfig {
         .csrf(csrf -> csrf.disable())
         .cors(Customizer.withDefaults())
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/", "/error", "/auth/**","/api/**").permitAll()
+            .requestMatchers(
+                "/",
+                "/index.html",
+                "/static/**",
+                "/manifest.json",
+                "/asset-manifest.json",
+                "/swagger_APIs_definition.json",
+                "/swagger_APIs_definition.yaml",
+                "/error",
+                "/auth/**",
+                "/api/**",
+                "/todolist/**"
+            ).permitAll()
             .anyRequest().authenticated()
         );
 
