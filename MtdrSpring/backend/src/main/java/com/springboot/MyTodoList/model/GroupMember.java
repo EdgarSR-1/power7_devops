@@ -54,7 +54,7 @@ public class GroupMember {
     public void prePersist() {
         // keep roleName in sync automatically
         if (this.role != null && (this.roleName == null || this.roleName.isBlank())) {
-            this.roleName = this.role.getName();
+            this.roleName = this.role.getName().name();
         }
     }
 

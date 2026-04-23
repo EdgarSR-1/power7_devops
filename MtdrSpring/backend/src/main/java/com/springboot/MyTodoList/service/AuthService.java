@@ -4,8 +4,10 @@ import com.springboot.MyTodoList.dto.AuthResponse;
 import com.springboot.MyTodoList.dto.LoginRequest;
 import com.springboot.MyTodoList.dto.RegisterRequest;
 import com.springboot.MyTodoList.model.User;
+import com.springboot.MyTodoList.dto.CurrentUserDTO;
 import com.springboot.MyTodoList.repository.UserRepository;
 import com.springboot.MyTodoList.security.JwtService;
+import com.springboot.MyTodoList.service.UserService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -13,12 +15,14 @@ import org.springframework.stereotype.Service;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final UserService userService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
-    public AuthService(UserRepository userRepository,
+    public AuthService(UserService userService, UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService) {
+        this.userService = userService;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -35,7 +39,7 @@ public class AuthService {
         user.setPhone(request.getPhone());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-        User savedUser = userRepository.save(user);
+        User savedUser = userService.createUser(user);
 
         String token = jwtService.generateToken(savedUser.getEmail(), savedUser.getId());
 
@@ -46,6 +50,18 @@ public class AuthService {
                 savedUser.getEmail()
         );
     }
+
+    public CurrentUserDTO getCurrentUser(String email) {
+    User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+    return new CurrentUserDTO(
+            user.getId(),
+            user.getName(),
+            user.getEmail(),
+            user.getRole().getName().name()
+    );
+}
 
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(request.getEmail())

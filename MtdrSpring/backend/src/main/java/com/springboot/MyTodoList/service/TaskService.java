@@ -2,6 +2,8 @@ package com.springboot.MyTodoList.service;
 
 import com.springboot.MyTodoList.dto.TaskRequestDTO;
 import com.springboot.MyTodoList.dto.TaskResponseDTO;
+import com.springboot.MyTodoList.model.GroupMember;
+import com.springboot.MyTodoList.model.RoleName;
 import com.springboot.MyTodoList.model.Sprint;
 import com.springboot.MyTodoList.model.Task;
 import com.springboot.MyTodoList.model.TaskGroup;
@@ -9,6 +11,7 @@ import com.springboot.MyTodoList.model.TaskPriority;
 import com.springboot.MyTodoList.model.TaskStatus;
 import com.springboot.MyTodoList.model.TodoList;
 import com.springboot.MyTodoList.model.User;
+import com.springboot.MyTodoList.repository.GroupMemberRepository;
 import com.springboot.MyTodoList.repository.SprintRepository;
 import com.springboot.MyTodoList.repository.TaskGroupRepository;
 import com.springboot.MyTodoList.repository.TaskRepository;
@@ -16,9 +19,9 @@ import com.springboot.MyTodoList.repository.TodoListRepository;
 import com.springboot.MyTodoList.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -30,27 +33,41 @@ public class TaskService {
     private final TaskGroupRepository taskGroupRepository;
     private final UserRepository userRepository;
     private final SprintRepository sprintRepository;
+    private final GroupMemberRepository groupMemberRepository;
 
     public TaskService(TaskRepository taskRepository,
                        TodoListRepository todoListRepository,
                        TaskGroupRepository taskGroupRepository,
                        UserRepository userRepository,
-                       SprintRepository sprintRepository) {
+                       SprintRepository sprintRepository,
+                       GroupMemberRepository groupMemberRepository) {
         this.taskRepository = taskRepository;
         this.todoListRepository = todoListRepository;
         this.taskGroupRepository = taskGroupRepository;
         this.userRepository = userRepository;
         this.sprintRepository = sprintRepository;
+        this.groupMemberRepository = groupMemberRepository;
     }
 
-    public TaskResponseDTO createTask(TaskRequestDTO dto) {
+    public TaskResponseDTO createTask(TaskRequestDTO dto, User currentUser) {
         TodoList todoList = todoListRepository.findById(dto.getListId())
                 .orElseThrow(() -> new RuntimeException("TodoList not found"));
 
-        User createdBy = null;
+        Long groupId = extractGroupId(todoList);
+        validateGroupAccess(currentUser, groupId);
+
+        User createdBy = currentUser;
         if (dto.getCreatedById() != null) {
-            createdBy = userRepository.findById(dto.getCreatedById())
+            User requestedCreator = userRepository.findById(dto.getCreatedById())
                     .orElseThrow(() -> new RuntimeException("User not found"));
+
+            if (isSuperAdmin(currentUser)) {
+                createdBy = requestedCreator;
+            } else if (requestedCreator.getId().equals(currentUser.getId())) {
+                createdBy = currentUser;
+            } else {
+                throw new RuntimeException("You cannot create tasks for another user");
+            }
         }
 
         if (dto.getStartDate() != null && dto.getEndDate() != null
@@ -67,10 +84,14 @@ public class TaskService {
 
         if (dto.getStatus() != null) {
             task.setStatus(TaskStatus.valueOf(dto.getStatus()));
+        } else {
+            task.setStatus(TaskStatus.pending);
         }
 
         if (dto.getPriority() != null) {
             task.setPriority(TaskPriority.valueOf(dto.getPriority()));
+        } else {
+            task.setPriority(TaskPriority.medium);
         }
 
         task.setStartDate(dto.getStartDate());
@@ -126,9 +147,26 @@ public class TaskService {
                 .orElse(null);
     }
 
-    public List<TaskResponseDTO> getAllTasks() {
-        return taskRepository.findAll()
-                .stream()
+    public List<TaskResponseDTO> getAllTasks(User currentUser) {
+        List<Task> tasks;
+
+        if (isSuperAdmin(currentUser)) {
+            tasks = taskRepository.findAll();
+        } else {
+            List<GroupMember> memberships = groupMemberRepository.findByUserId(currentUser.getId());
+            List<Long> groupIds = memberships.stream()
+                    .map(groupMember -> groupMember.getGroup().getId())
+                    .collect(Collectors.toList());
+
+            tasks = taskRepository.findAll().stream()
+                    .filter(task -> {
+                        Long taskGroupId = extractGroupId(task);
+                        return taskGroupId != null && groupIds.contains(taskGroupId);
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        return tasks.stream()
                 .sorted(Comparator
                         .comparing((Task task) -> task.getTodoList() != null && task.getTodoList().getGroup() != null
                                 ? task.getTodoList().getGroup().getName()
@@ -138,9 +176,11 @@ public class TaskService {
                 .collect(Collectors.toList());
     }
 
-    public TaskResponseDTO getTaskById(Long id) {
+    public TaskResponseDTO getTaskById(Long id, User currentUser) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        validateTaskReadAccess(currentUser, task);
         return mapToResponseDTO(task);
     }
 
@@ -155,20 +195,35 @@ public class TaskService {
                 .orElseThrow(() -> new RuntimeException("Sprint not found"));
     }
 
-    public List<Task> getTasksBySprintId(Long sprintId) {
-        return taskRepository.findBySprintIdOrderByCreatedAtAsc(sprintId);
+    public List<Task> getTasksBySprintId(Long sprintId, User currentUser) {
+        List<Task> tasks = taskRepository.findBySprintIdOrderByCreatedAtAsc(sprintId);
+
+        if (isSuperAdmin(currentUser)) {
+            return tasks;
+        }
+
+        return tasks.stream()
+                .filter(task -> {
+                    Long groupId = extractGroupId(task);
+                    return belongsToGroup(currentUser, groupId);
+                })
+                .collect(Collectors.toList());
     }
 
-    public TaskResponseDTO updateTaskStatus(Long taskId, TaskStatus status) {
+    public TaskResponseDTO updateTaskStatus(Long taskId, TaskStatus status, User currentUser) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        validateTaskEditAccess(currentUser, task);
         task.setStatus(status);
         return mapToResponseDTO(taskRepository.save(task));
     }
 
-    public TaskResponseDTO moveTaskToSprint(Long taskId, Long sprintId) {
+    public TaskResponseDTO moveTaskToSprint(Long taskId, Long sprintId, User currentUser) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        validateTaskEditAccess(currentUser, task);
 
         Sprint sprint = sprintRepository.findById(sprintId)
                 .orElseThrow(() -> new RuntimeException("Sprint not found"));
@@ -177,19 +232,22 @@ public class TaskService {
         return mapToResponseDTO(taskRepository.save(task));
     }
 
-    public void deleteTask(Long taskId) {
-        taskRepository.deleteById(taskId);
+    public void deleteTask(Long taskId, User currentUser) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        validateTaskEditAccess(currentUser, task);
+        taskRepository.delete(task);
     }
 
-    public List<Task> getTasksByGroupId(Long groupId) {
+    public List<Task> getTasksByGroupId(Long groupId, User currentUser) {
+        validateGroupAccess(currentUser, groupId);
         return taskRepository.findByTodoListGroupId(groupId);
     }
 
-    public TaskResponseDTO createTaskInGroup(Long groupId, String title) {
-        return createTaskInGroup(groupId, title, null);
-    }
+    public TaskResponseDTO createTaskInGroup(Long groupId, String title, User currentUser) {
+        validateGroupAccess(currentUser, groupId);
 
-    public TaskResponseDTO createTaskInGroup(Long groupId, String title, User createdBy) {
         TaskGroup group = taskGroupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("TaskGroup not found"));
 
@@ -202,7 +260,6 @@ public class TaskService {
         });
 
         Sprint sprint = resolveSprintForWindow(null, null, null);
-        User taskCreator = createdBy != null ? createdBy : group.getCreatedBy();
 
         Task task = new Task();
         task.setTodoList(targetList);
@@ -210,17 +267,15 @@ public class TaskService {
         task.setDescription(title);
         task.setStatus(TaskStatus.pending);
         task.setPriority(TaskPriority.medium);
-        task.setCreatedBy(taskCreator);
+        task.setCreatedBy(currentUser);
         task.setSprint(sprint);
 
         return mapToResponseDTO(taskRepository.save(task));
     }
 
-    public TaskResponseDTO createTaskInGroupWithHours(Long groupId, String title, Float estimatedHours) {
-        return createTaskInGroupWithHours(groupId, title, estimatedHours, null);
-    }
+    public TaskResponseDTO createTaskInGroupWithHours(Long groupId, String title, Float estimatedHours, User currentUser) {
+        validateGroupAccess(currentUser, groupId);
 
-    public TaskResponseDTO createTaskInGroupWithHours(Long groupId, String title, Float estimatedHours, User createdBy) {
         TaskGroup group = taskGroupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("TaskGroup not found"));
 
@@ -233,7 +288,6 @@ public class TaskService {
         });
 
         Sprint sprint = resolveSprintForWindow(null, null, null);
-        User taskCreator = createdBy != null ? createdBy : group.getCreatedBy();
 
         Task task = new Task();
         task.setTodoList(targetList);
@@ -241,54 +295,159 @@ public class TaskService {
         task.setDescription(title);
         task.setStatus(TaskStatus.pending);
         task.setPriority(TaskPriority.medium);
-        task.setCreatedBy(taskCreator);
+        task.setCreatedBy(currentUser);
         task.setSprint(sprint);
         task.setEstimatedHours(estimatedHours != null ? estimatedHours : 1f);
 
         return mapToResponseDTO(taskRepository.save(task));
     }
 
-    public TaskResponseDTO startTask(Long taskId) {
+    public TaskResponseDTO startTask(Long taskId, User currentUser) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        validateTaskEditAccess(currentUser, task);
         task.setStatus(TaskStatus.in_progress);
         return mapToResponseDTO(taskRepository.save(task));
     }
 
-    public TaskResponseDTO completeTask(Long taskId, Float actualHours) {
+    public TaskResponseDTO completeTask(Long taskId, Float actualHours, User currentUser) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        validateTaskEditAccess(currentUser, task);
         task.setStatus(TaskStatus.completed);
         task.setActualHours(actualHours);
         return mapToResponseDTO(taskRepository.save(task));
     }
 
-    private TaskResponseDTO mapToResponseDTO(Task task) {
-    String assigneeName = task.getCreatedBy() != null ? task.getCreatedBy().getName() : null;
-    String todoListName = task.getTodoList() != null ? task.getTodoList().getName() : null;
-    String groupName = null;
-    Long sprintId = task.getSprint() != null ? task.getSprint().getId() : null;
-    String sprintName = task.getSprint() != null ? task.getSprint().getName() : null;
-
-    if (task.getTodoList() != null && task.getTodoList().getGroup() != null) {
-        groupName = task.getTodoList().getGroup().getName();
+    private boolean isSuperAdmin(User user) {
+        return user != null
+                && user.getRole() != null
+                && user.getRole().getName() == RoleName.SUPERADMIN;
     }
 
-    return new TaskResponseDTO(
-            task.getId(),
-            task.getTitle(),
-            task.getDescription(),
-            task.getStatus() != null ? task.getStatus().name() : null,
-            task.getPriority() != null ? task.getPriority().name() : null,
-            task.getStartDate(),
-            task.getEndDate(),
-            task.getDueDate(),
-            task.getCreatedAt(),
-            groupName,
-            todoListName,
-            assigneeName,
-            sprintId,
-            sprintName
-    );
-}
+    private boolean isAdmin(User user) {
+        return user != null
+                && user.getRole() != null
+                && user.getRole().getName() == RoleName.ADMIN;
+    }
+
+    private boolean isUsuario(User user) {
+        return user != null
+                && user.getRole() != null
+                && user.getRole().getName() == RoleName.USUARIO;
+    }
+
+    private Long extractGroupId(Task task) {
+        if (task == null || task.getTodoList() == null || task.getTodoList().getGroup() == null) {
+            return null;
+        }
+        return task.getTodoList().getGroup().getId();
+    }
+
+    private Long extractGroupId(TodoList todoList) {
+        if (todoList == null || todoList.getGroup() == null) {
+            return null;
+        }
+        return todoList.getGroup().getId();
+    }
+
+    private boolean belongsToGroup(User user, Long groupId) {
+        if (user == null || user.getId() == null || groupId == null) {
+            return false;
+        }
+
+        return groupMemberRepository.existsByGroupIdAndUserId(groupId, user.getId());
+    }
+
+    private void validateGroupAccess(User currentUser, Long groupId) {
+        if (currentUser == null) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        if (isSuperAdmin(currentUser)) {
+            return;
+        }
+
+        if (!belongsToGroup(currentUser, groupId)) {
+            throw new RuntimeException("You do not have access to this group");
+        }
+    }
+
+    private void validateTaskReadAccess(User currentUser, Task task) {
+        if (currentUser == null) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        if (isSuperAdmin(currentUser)) {
+            return;
+        }
+
+        Long groupId = extractGroupId(task);
+        if (!belongsToGroup(currentUser, groupId)) {
+            throw new RuntimeException("You do not have access to this task");
+        }
+    }
+
+    private void validateTaskEditAccess(User currentUser, Task task) {
+        if (currentUser == null) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        if (isSuperAdmin(currentUser)) {
+            return;
+        }
+
+        Long groupId = extractGroupId(task);
+
+        if (isAdmin(currentUser)) {
+            if (!belongsToGroup(currentUser, groupId)) {
+                throw new RuntimeException("You do not have access to this task");
+            }
+            return;
+        }
+
+        if (isUsuario(currentUser)) {
+            if (!belongsToGroup(currentUser, groupId)) {
+                throw new RuntimeException("You do not have access to this task");
+            }
+
+            if (task.getCreatedBy() == null || !task.getCreatedBy().getId().equals(currentUser.getId())) {
+                throw new RuntimeException("You can only modify your own tasks");
+            }
+            return;
+        }
+
+        throw new RuntimeException("Unauthorized");
+    }
+
+    private TaskResponseDTO mapToResponseDTO(Task task) {
+        String assigneeName = task.getCreatedBy() != null ? task.getCreatedBy().getName() : null;
+        String todoListName = task.getTodoList() != null ? task.getTodoList().getName() : null;
+        String groupName = null;
+        Long sprintId = task.getSprint() != null ? task.getSprint().getId() : null;
+        String sprintName = task.getSprint() != null ? task.getSprint().getName() : null;
+
+        if (task.getTodoList() != null && task.getTodoList().getGroup() != null) {
+            groupName = task.getTodoList().getGroup().getName();
+        }
+
+        return new TaskResponseDTO(
+                task.getId(),
+                task.getTitle(),
+                task.getDescription(),
+                task.getStatus() != null ? task.getStatus().name() : null,
+                task.getPriority() != null ? task.getPriority().name() : null,
+                task.getStartDate(),
+                task.getEndDate(),
+                task.getDueDate(),
+                task.getCreatedAt(),
+                groupName,
+                todoListName,
+                assigneeName,
+                sprintId,
+                sprintName
+        );
+    }
 }

@@ -8,6 +8,7 @@ import com.springboot.MyTodoList.repository.GroupMemberRepository;
 import com.springboot.MyTodoList.repository.RoleRepository;
 import com.springboot.MyTodoList.repository.TaskGroupRepository;
 import com.springboot.MyTodoList.repository.UserRepository;
+import com.springboot.MyTodoList.model.RoleName;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -108,11 +109,11 @@ public class GroupMemberService {
     }
 
     private Role resolveDefaultRole() {
-        return roleRepository.findFirstByNameIgnoreCase("Member").orElseGet(() -> {
-            Role role = new Role();
-            role.setName("Member");
-            role.setDescription("Default group member");
-            return roleRepository.save(role);
-        });
-    }
+    return roleRepository.findByName(RoleName.USUARIO).orElseGet(() -> {
+        Role role = new Role();
+        role.setName(RoleName.USUARIO);
+        role.setDescription("Default group member");
+        return roleRepository.save(role);
+    });
+}
 }

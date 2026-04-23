@@ -27,43 +27,54 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws ServletException, IOException {
+                                HttpServletResponse response,
+                                FilterChain filterChain) throws ServletException, IOException {
 
-        final String authHeader = request.getHeader("Authorization");
-        final String jwtToken;
-        final String userEmail;
+    final String authHeader = request.getHeader("Authorization");
+    final String jwtToken;
+    final String userEmail;
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
+    System.out.println("PATH: " + request.getRequestURI());
+    System.out.println("AUTH HEADER: " + authHeader);
 
-        jwtToken = authHeader.substring(7);
-
-        try {
-            userEmail = jwtService.extractEmail(jwtToken);
-        } catch (Exception e) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
-
-            if (jwtService.isTokenValid(jwtToken)) {
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
-            }
-        }
-
+    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        System.out.println("No Bearer token found");
         filterChain.doFilter(request, response);
+        return;
     }
+
+    jwtToken = authHeader.substring(7);
+
+    try {
+        userEmail = jwtService.extractEmail(jwtToken);
+        System.out.println("EMAIL FROM TOKEN: " + userEmail);
+    } catch (Exception e) {
+        System.out.println("TOKEN ERROR: " + e.getMessage());
+        filterChain.doFilter(request, response);
+        return;
+    }
+
+    if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
+        System.out.println("USERDETAILS USERNAME: " + userDetails.getUsername());
+
+        if (jwtService.isTokenValid(jwtToken)) {
+            System.out.println("TOKEN VALID");
+            UsernamePasswordAuthenticationToken authToken =
+                    new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+
+            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authToken);
+            System.out.println("AUTHENTICATION SET");
+        } else {
+            System.out.println("TOKEN INVALID");
+        }
+    }
+
+    filterChain.doFilter(request, response);
+}
 }
