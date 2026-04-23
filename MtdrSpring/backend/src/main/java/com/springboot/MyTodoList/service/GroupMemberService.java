@@ -1,9 +1,11 @@
 package com.springboot.MyTodoList.service;
 
 import com.springboot.MyTodoList.model.GroupMember;
+import com.springboot.MyTodoList.model.Role;
 import com.springboot.MyTodoList.model.TaskGroup;
 import com.springboot.MyTodoList.model.User;
 import com.springboot.MyTodoList.repository.GroupMemberRepository;
+import com.springboot.MyTodoList.repository.RoleRepository;
 import com.springboot.MyTodoList.repository.TaskGroupRepository;
 import com.springboot.MyTodoList.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -17,15 +19,18 @@ public class GroupMemberService {
     private final GroupMemberRepository repository;
     private final TaskGroupRepository taskGroupRepository;
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
 
     public GroupMemberService(
             GroupMemberRepository repository,
             TaskGroupRepository taskGroupRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            RoleRepository roleRepository
     ) {
         this.repository = repository;
         this.taskGroupRepository = taskGroupRepository;
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
     }
 
     public List<GroupMember> getAll() {
@@ -62,6 +67,9 @@ public class GroupMemberService {
 
         groupMember.setGroup(group);
         groupMember.setUser(user);
+        if (groupMember.getRole() == null) {
+            groupMember.setRole(resolveDefaultRole());
+        }
 
         if (groupMember.getJoinedAt() == null) {
             groupMember.setJoinedAt(LocalDateTime.now());
@@ -97,5 +105,14 @@ public class GroupMemberService {
 
     public void delete(Long id) {
         repository.deleteById(id);
+    }
+
+    private Role resolveDefaultRole() {
+        return roleRepository.findFirstByNameIgnoreCase("Member").orElseGet(() -> {
+            Role role = new Role();
+            role.setName("Member");
+            role.setDescription("Default group member");
+            return roleRepository.save(role);
+        });
     }
 }
