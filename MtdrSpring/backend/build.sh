@@ -7,18 +7,29 @@ cd "$script_dir"
 
 container_name="agilecontainer"
 image_name="agileimage:0.1"
-dockerfile="DockerfileDev"
-maven_cmd="./mvnw"
-platform="linux/amd64"
+docker_platform="${DOCKER_PLATFORM:-}"
+docker_memory="${DOCKER_MEMORY:-1g}"
+docker_cpus="${DOCKER_CPUS:-2}"
 
-if [[ ! -x "$maven_cmd" ]]; then
-  maven_cmd="mvn"
+build_args=()
+if [[ -n "$docker_platform" ]]; then
+	build_args+=(--platform "$docker_platform")
 fi
 
 docker stop "$container_name" 2>/dev/null || true
 docker rm -f "$container_name" 2>/dev/null || true
 docker rmi "$image_name" 2>/dev/null || true
 
-"$maven_cmd" clean verify
-docker build -f "$dockerfile" --platform "$platform" -t "$image_name" .
-docker run --name "$container_name" --platform "$platform" --volume "${PWD}/target:/tmp/target:rw" -p 8080:8080 -d "$image_name"
+mvn clean verify
+docker build -f Dockerfile "${build_args[@]}" -t "$image_name" .
+
+run_args=(--name "$container_name" \
+	--memory "$docker_memory" \
+	--cpus "$docker_cpus" \
+	-p 8080:8080)
+
+if [[ -f ".env.local" ]]; then
+	run_args+=(--env-file .env.local)
+fi
+
+docker run "${run_args[@]}" -d "$image_name"

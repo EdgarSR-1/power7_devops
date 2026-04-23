@@ -15,6 +15,7 @@
 *.zip
 *.tar.gz
 *.rar
+.env
 backend/target/*
 backend/.settings/*
 backend/.project
