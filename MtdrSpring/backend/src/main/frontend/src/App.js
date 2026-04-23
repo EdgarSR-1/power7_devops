@@ -210,15 +210,15 @@ function App() {
   }
 
   const tasksByStatus = STATUS_ORDER.reduce((acc, status) => {
-    acc[status] = tasks.filter(t => (t.status || 'pending') === status);
+    acc[status] = tasks.filter(t => {
+      if (!t.status) {
+        console.warn('Task missing status field:', t.id);
+        return status === 'pending';
+      }
+      return t.status === status;
+    });
     return acc;
   }, {});
-
-  const columnTitles = {
-    pending: 'Pendiente',
-    in_progress: 'En Progreso',
-    completed: 'Completado',
-  };
 
   return (
     <div className="App">
@@ -235,7 +235,7 @@ function App() {
           {STATUS_ORDER.map(status => (
             <TaskColumn
               key={status}
-              title={columnTitles[status]}
+              title={STATUS_LABELS[status]}
               tasks={tasksByStatus[status]}
               onDetails={handleOpenDetails}
             />
