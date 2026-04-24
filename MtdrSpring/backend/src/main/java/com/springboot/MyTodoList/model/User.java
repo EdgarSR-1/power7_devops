@@ -33,7 +33,7 @@ public class User {
     private Long telegramChatId;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "ROLE", nullable = false)
+    @JoinColumn(name = "ROLE", referencedColumnName = "ID", nullable = false)
     private Role role;
 
     @Column(name = "CREATED_AT", insertable = false, updatable = false)

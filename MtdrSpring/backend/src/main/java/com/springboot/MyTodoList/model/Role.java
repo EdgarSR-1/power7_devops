@@ -3,18 +3,19 @@ package com.springboot.MyTodoList.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "roles")
+@Table(name = "ROLES")
 public class Role {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "ID", nullable = false)
     private Long id;
 
     @Enumerated(EnumType.STRING) // 🔥 importante
-    @Column(name = "name", nullable = false, length = 255)
+    @Column(name = "NAME", nullable = false, length = 255)
     private RoleName name;
 
-    @Column(name = "description", length = 255)
+    @Column(name = "DESCRIPTION", length = 255)
     private String description;
 
     public Role() {}
