@@ -2,12 +2,13 @@ name: Lint Code Base
 
 on:
   push:
-    branches: [develop]   # solo develop directo
+    branches: [develop]
   pull_request:
-    branches: [main, develop]  # PRs a ambas
+    branches: [main, develop]
 
 jobs:
   super-lint:
+    name: Run Super-Linter
     runs-on: ubuntu-latest
 
     steps:
@@ -19,6 +20,4 @@ jobs:
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-          # 🔥 clave para performance
           VALIDATE_ALL_CODEBASE: false
