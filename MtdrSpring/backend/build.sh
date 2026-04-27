@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$script_dir"
+
 container_name="agilecontainer"
 image_name="agileimage:0.1"
 docker_platform="${DOCKER_PLATFORM:-}"

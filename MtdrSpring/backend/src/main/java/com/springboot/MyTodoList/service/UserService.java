@@ -1,8 +1,11 @@
 package com.springboot.MyTodoList.service;
 
+import com.springboot.MyTodoList.model.Role;
+import com.springboot.MyTodoList.model.RoleName;
 import com.springboot.MyTodoList.model.User;
-import com.springboot.MyTodoList.model.UserType;
+import com.springboot.MyTodoList.repository.RoleRepository;
 import com.springboot.MyTodoList.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,9 +16,13 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository repo;
+    private final PasswordEncoder passwordEncoder;
+    private final RoleRepository roleRepository;
 
-    public UserService(UserRepository repo) {
+    public UserService(UserRepository repo, PasswordEncoder passwordEncoder, RoleRepository roleRepository) {
         this.repo = repo;
+        this.passwordEncoder = passwordEncoder;
+        this.roleRepository = roleRepository;
     }
 
     public List<User> getAllUsers() {
@@ -29,11 +36,13 @@ public class UserService {
 
         String name = normalizeRequired(user.getName(), "Name is required");
         String email = normalizeRequired(user.getEmail(), "Email is required").toLowerCase(Locale.ROOT);
-        String password = normalizeRequired(user.getPassword(), "Password is required");
+        String password = encodePasswordIfNeeded(normalizeRequired(user.getPassword(), "Password is required"));
         String phone = normalizePhoneRequired(user.getPhone(), "Phone is required");
         Long telegramUserId = user.getTelegramUserId();
         Long telegramChatId = user.getTelegramChatId();
-        UserType requestedType = user.getUserType() != null ? user.getUserType() : UserType.NORMAL;
+
+        Role defaultRole = roleRepository.findByName(RoleName.USUARIO)
+                .orElseThrow(() -> new RuntimeException("Rol USUARIO no encontrado"));
 
         if (telegramUserId != null) {
             Optional<User> existingByTelegram = repo.findByTelegramUserId(telegramUserId);
@@ -46,8 +55,8 @@ public class UserService {
                 existing.setPassword(password);
                 existing.setPhone(phone);
                 existing.setTelegramChatId(telegramChatId);
-                if (existing.getUserType() == null) {
-                    existing.setUserType(requestedType);
+                if (existing.getRole() == null) {
+                    existing.setRole(defaultRole);
                 }
                 return repo.save(existing);
             }
@@ -67,8 +76,8 @@ public class UserService {
                 existing.setPhone(phone);
                 existing.setTelegramUserId(telegramUserId);
                 existing.setTelegramChatId(telegramChatId);
-                if (existing.getUserType() == null) {
-                    existing.setUserType(requestedType);
+                if (existing.getRole() == null) {
+                    existing.setRole(defaultRole);
                 }
                 return repo.save(existing);
             }
@@ -82,9 +91,11 @@ public class UserService {
         user.setEmail(email);
         user.setPassword(password);
         user.setPhone(phone);
-        if (user.getUserType() == null) {
-            user.setUserType(UserType.NORMAL);
+
+        if (user.getRole() == null) {
+            user.setRole(defaultRole);
         }
+
         return repo.save(user);
     }
 
@@ -168,5 +179,13 @@ public class UserService {
                 throw new RuntimeException("Email already exists");
             }
         }
+    }
+
+    private String encodePasswordIfNeeded(String password) {
+        if (password.startsWith("$2a$") || password.startsWith("$2b$") || password.startsWith("$2y$")) {
+            return password;
+        }
+
+        return passwordEncoder.encode(password);
     }
 }

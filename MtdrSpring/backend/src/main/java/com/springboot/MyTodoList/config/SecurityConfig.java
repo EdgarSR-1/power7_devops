@@ -7,12 +7,12 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.http.HttpMethod;
 
 @Configuration
 public class SecurityConfig {
@@ -40,14 +40,31 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http
-        .csrf(csrf -> csrf.disable())
-        .cors(Customizer.withDefaults())
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/", "/error", "/auth/**","/api/**").permitAll()
-            .anyRequest().authenticated()
-        );
+        http
+            .csrf(csrf -> csrf.disable())
+            .cors(Customizer.withDefaults())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authenticationProvider(authenticationProvider())
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(
+                    "/",
+                    "/index.html",
+                    "/static/**",
+                    "/api/**",
+                    "/auth/**",
+                    "/manifest.json",
+                    "/asset-manifest.json",
+                    "/swagger_APIs_definition.json",
+                    "/swagger_APIs_definition.yaml",
+                    "/error",
+                    "/auth/login",
+                    "/auth/register",
+                    "/todolist/**"
+                ).permitAll()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-    return http.build();
-}
+        return http.build();
+    }
 }

@@ -8,7 +8,6 @@ import com.springboot.MyTodoList.model.TaskGroup;
 import com.springboot.MyTodoList.model.TaskStatus;
 import com.springboot.MyTodoList.model.ToDoItem;
 import com.springboot.MyTodoList.model.User;
-import com.springboot.MyTodoList.model.UserType;
 import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.SprintService;
 import com.springboot.MyTodoList.service.TaskGroupService;
@@ -453,7 +452,7 @@ public class BotActions{
     private void renderAllTasksMenu(String titleMessage) {
         lastViewedGroupByChat.remove(chatId);
         clearTaskActionButtons();
-        List<TaskResponseDTO> allTasks = taskService.getAllTasks();
+        List<TaskResponseDTO> allTasks = taskService.getAllTasks(requesterUser);
 
         ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup.builder()
                 .resizeKeyboard(true)
@@ -512,7 +511,7 @@ public class BotActions{
         lastViewedGroupByChat.put(chatId, groupId);
         clearTaskActionButtons();
 
-        List<Task> groupTasks = taskService.getTasksByGroupId(groupId);
+        List<Task> groupTasks = taskService.getTasksByGroupId(groupId, requesterUser);
         List<Task> activeTasks = groupTasks.stream()
                 .filter(task -> task.getStatus() != TaskStatus.completed)
                 .collect(Collectors.toList());
@@ -582,15 +581,17 @@ public class BotActions{
 
         String roleMessage = "";
         String userIdText = "N/A";
-        String userTypeText = "UNREGISTERED";
-        if (requesterUser != null && requesterUser.getUserType() != null) {
-            roleMessage = requesterUser.getUserType() == UserType.DEVELOPER
-                    ? "\n\n" + BotMessages.ROLE_DEVELOPER.getMessage()
-                    : "\n\n" + BotMessages.ROLE_NORMAL.getMessage();
+        String roleText = "UNREGISTERED";
+
+        if (requesterUser != null && requesterUser.getRole() != null) {
+            String roleName = requesterUser.getRole().getName().name();
+
+            roleMessage = "\n\nRol: " + roleName;
+            roleText = roleName;
+
             if (requesterUser.getId() != null) {
                 userIdText = String.valueOf(requesterUser.getId());
             }
-            userTypeText = requesterUser.getUserType().name();
         }
 
         String identityDebug = "";
@@ -598,7 +599,7 @@ public class BotActions{
             identityDebug = "\n\nDebug Identity\n"
                     + "telegramUserId: " + (telegramUserId != null ? telegramUserId : "N/A") + "\n"
                     + "dbUserId: " + userIdText + "\n"
-                    + "userType: " + userTypeText;
+                    + "role: " + roleText;
 
             if (requesterUser == null) {
                 identityDebug += "\n" + BotMessages.USER_NOT_REGISTERED.getMessage();
@@ -723,7 +724,7 @@ public class BotActions{
 
         try {
             Long taskId = Long.valueOf(actionToken.substring(TASK_START_PREFIX.length()));
-            taskService.startTask(taskId);
+            taskService.startTask(taskId, requesterUser);
             Long groupId = lastViewedGroupByChat.get(chatId);
             if (groupId != null) {
                 renderGroupTasksMenu(groupId, "Task started!");
@@ -746,7 +747,7 @@ public class BotActions{
 
         try {
             Long taskId = Long.valueOf(actionToken.substring(TASK_UNDO_PREFIX.length()));
-            taskService.updateTaskStatus(taskId, TaskStatus.pending);
+            taskService.updateTaskStatus(taskId, TaskStatus.pending, requesterUser);
             Long groupId = lastViewedGroupByChat.get(chatId);
             if (groupId != null) {
                 renderGroupTasksMenu(groupId, BotMessages.ITEM_UNDONE.getMessage());
@@ -769,7 +770,7 @@ public class BotActions{
 
         try {
             Long taskId = Long.valueOf(actionToken.substring(TASK_DELETE_PREFIX.length()));
-            taskService.deleteTask(taskId);
+            taskService.deleteTask(taskId, requesterUser);
             Long groupId = lastViewedGroupByChat.get(chatId);
             if (groupId != null) {
                 renderGroupTasksMenu(groupId, BotMessages.ITEM_DELETED.getMessage());
@@ -882,7 +883,7 @@ public class BotActions{
                 }
 
                 Sprint sprint = currentSprint.get();
-                List<Task> sprintTasks = taskService.getTasksBySprintId(sprint.getId());
+                List<Task> sprintTasks = taskService.getTasksBySprintId(sprint.getId(), requesterUser);
                 sendSprintTasksSummary(sprint, sprintTasks);
                 exit = true;
                 return;
@@ -899,7 +900,7 @@ public class BotActions{
             }
 
             Sprint sprint = taskService.getSprintById(sprintId);
-            List<Task> sprintTasks = taskService.getTasksBySprintId(sprintId);
+            List<Task> sprintTasks = taskService.getTasksBySprintId(sprintId, requesterUser);
             sendSprintTasksSummary(sprint, sprintTasks);
         } catch (RuntimeException ex) {
             sendMessageWithMainMenu(ex.getMessage());
@@ -1074,8 +1075,8 @@ public class BotActions{
             user.setPhone(matcher.group(4));
             user.setTelegramUserId(telegramUserId);
             user.setTelegramChatId(chatId);
-            if (requesterUser != null && requesterUser.getUserType() != null) {
-                user.setUserType(requesterUser.getUserType());
+            if (requesterUser != null && requesterUser.getRole() != null) {
+                 user.setRole(requesterUser.getRole());
             }
 
             userService.createUser(user);
@@ -1303,7 +1304,7 @@ public class BotActions{
         if (pendingTaskId != null && trimmedRequest.matches("^\\d+$")) {
             try {
                 Long sprintId = Long.valueOf(trimmedRequest);
-                taskService.moveTaskToSprint(pendingTaskId, sprintId);
+                taskService.moveTaskToSprint(pendingTaskId, sprintId, requesterUser);
                 clearPendingMoveSprintTask();
 
                 Long groupId = lastViewedGroupByChat.get(chatId);
@@ -1364,7 +1365,7 @@ public class BotActions{
         }
 
         try {
-            taskService.moveTaskToSprint(taskId, sprintId);
+            taskService.moveTaskToSprint(taskId, sprintId, requesterUser);
             String message = String.format(BotMessages.TASK_SPRINT_CHANGED.getMessage(), taskId, sprintId);
             sendMessageWithMainMenu(message);
         } catch (Exception e) {
@@ -1397,7 +1398,7 @@ public class BotActions{
         }
 
         try {
-            taskService.startTask(taskId);
+            taskService.startTask(taskId, requesterUser);
             String message = String.format(BotMessages.TASK_STARTED.getMessage(), taskId);
             sendMessageWithMainMenu(message);
         } catch (Exception e) {
@@ -1423,7 +1424,7 @@ public class BotActions{
                     return;
                 }
 
-                taskService.completeTask(pendingTaskId, actualHours);
+                taskService.completeTask(pendingTaskId, actualHours, requesterUser);
                 clearPendingCompleteTask();
 
                 Long groupId = lastViewedGroupByChat.get(chatId);
@@ -1480,7 +1481,7 @@ public class BotActions{
         }
 
         try {
-            taskService.completeTask(taskId, actualHours);
+            taskService.completeTask(taskId, actualHours, requesterUser);
             String message = String.format(BotMessages.TASK_COMPLETED.getMessage(), taskId, actualHours);
             sendMessageWithMainMenu(message);
         } catch (Exception e) {

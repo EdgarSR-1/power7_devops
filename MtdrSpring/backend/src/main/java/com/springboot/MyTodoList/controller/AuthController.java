@@ -1,12 +1,14 @@
 package com.springboot.MyTodoList.controller;
 
 import com.springboot.MyTodoList.dto.AuthResponse;
+import com.springboot.MyTodoList.dto.CurrentUserDTO;
 import com.springboot.MyTodoList.dto.LoginRequest;
 import com.springboot.MyTodoList.dto.RegisterRequest;
 import com.springboot.MyTodoList.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -35,6 +37,21 @@ public class AuthController {
         try {
             AuthResponse response = authService.login(request);
             return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(Authentication authentication) {
+        try {
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no autenticado");
+            }
+
+            CurrentUserDTO response = authService.getCurrentUser(authentication.getName());
+            return ResponseEntity.ok(response);
+
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
         }
