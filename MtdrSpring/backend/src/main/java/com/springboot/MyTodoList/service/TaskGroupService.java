@@ -11,6 +11,10 @@ import com.springboot.MyTodoList.repository.TaskRepository;
 import com.springboot.MyTodoList.repository.TodoListRepository;
 import com.springboot.MyTodoList.repository.UserRepository;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -75,6 +79,44 @@ public class TaskGroupService {
 
     public TaskGroup findById(Long id) {
         return repository.findById(id).orElseThrow();
+    }
+
+    /**
+     * Retorna los grupos accesibles para un usuario.
+     * Si el usuario es null o no tiene id, retorna lista vacía.
+     */
+    public List<TaskGroup> findAccessibleGroups(User user) {
+        if (user == null || user.getId() == null) {
+            return List.of();
+        }
+
+        Set<Long> accessibleIds = new HashSet<>();
+
+        // 1) Grupos donde es miembro
+        var memberships = groupMemberRepository.findByUserId(user.getId());
+        accessibleIds.addAll(memberships.stream()
+                .map(m -> m.getGroup() != null ? m.getGroup().getId() : null)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet()));
+
+        // 2) Grupos que creó
+        var created = repository.findByCreatedById(user.getId());
+        accessibleIds.addAll(created.stream()
+                .map(TaskGroup::getId)
+                .collect(Collectors.toSet()));
+
+        // 3) Grupos donde creó tareas
+        var tasks = taskRepository.findByCreatedById(user.getId());
+        accessibleIds.addAll(tasks.stream()
+                .map(t -> t.getTodoList() != null && t.getTodoList().getGroup() != null ? t.getTodoList().getGroup().getId() : null)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet()));
+
+        if (accessibleIds.isEmpty()) {
+            return List.of();
+        }
+
+        return repository.findAllById(new ArrayList<>(accessibleIds));
     }
 
     @Transactional

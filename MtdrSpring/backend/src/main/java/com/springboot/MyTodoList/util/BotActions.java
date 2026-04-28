@@ -646,7 +646,12 @@ public class BotActions{
                 || requestText.equals(BotLabels.SELECT_GROUP.getLabel())) || exit)
             return;
 
-        List<TaskGroup> groups = taskGroupService.findAll();
+        List<TaskGroup> groups;
+        if (requesterUser != null && requesterUser.getId() != null) {
+            groups = taskGroupService.findAccessibleGroups(requesterUser);
+        } else {
+            groups = taskGroupService.findAll();
+        }
         ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup.builder()
             .resizeKeyboard(true)
             .oneTimeKeyboard(false)
