@@ -44,6 +44,7 @@ public class SprintController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<Sprint> create(@RequestBody SprintRequestDTO dto) {
         Sprint sprint = sprintService.createSprint(dto);
         return new ResponseEntity<>(sprint, HttpStatus.CREATED);

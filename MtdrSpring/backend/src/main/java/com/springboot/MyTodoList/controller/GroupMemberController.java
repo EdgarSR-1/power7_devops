@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
@@ -77,6 +78,7 @@ public class GroupMemberController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<?> createGroupMember(@RequestBody GroupMember groupMember) {
         try {
             GroupMember saved = service.save(groupMember);
@@ -87,6 +89,7 @@ public class GroupMemberController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<GroupMember> updateGroupMember(
             @PathVariable Long id,
             @RequestBody GroupMember groupMember
@@ -100,6 +103,7 @@ public class GroupMemberController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<Void> deleteGroupMember(@PathVariable Long id) {
         try {
             service.delete(id);
