@@ -52,6 +52,8 @@ spec:
               value: "TODOUSER"
             - name: db_url
               value: "jdbc:oracle:thin:@%TODO_PDB_NAME%_tp?TNS_ADMIN=/mtdrworkshop/creds"
+            - name: APP_BOT_MODE
+              value: "%BOT_MODE%"
             - name: todo.table.name
               value: "todoitem"
             - name: driver_class_name
