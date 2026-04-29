@@ -4,6 +4,7 @@ import com.springboot.MyTodoList.agent.AgentOrchestrator;
 import com.springboot.MyTodoList.config.BotProps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.BotSession;
@@ -16,6 +17,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 @Component
+@ConditionalOnProperty(prefix = "telegram.bot", name = "agent-enabled", havingValue = "true")
 public class TelegramAgentBot implements SpringLongPollingBot, LongPollingSingleThreadUpdateConsumer {
 
     private static final Logger logger = LoggerFactory.getLogger(TelegramAgentBot.class);
@@ -67,4 +69,3 @@ public class TelegramAgentBot implements SpringLongPollingBot, LongPollingSingle
         logger.info("Agent bot fase 3 registrado. running={}", botSession.isRunning());
     }
 }
-

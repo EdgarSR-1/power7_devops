@@ -9,4 +9,5 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findByCreatedById(Long userId);
     List<Task> findByTodoListGroupId(Long groupId);
     List<Task> findBySprintIdOrderByCreatedAtAsc(Long sprintId);
+    boolean existsByCreatedByIdAndTodoListGroupId(Long userId, Long groupId);
 }

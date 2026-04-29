@@ -25,8 +25,10 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 import java.util.Optional;
 import java.util.regex.Pattern;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @Component
+@ConditionalOnProperty(prefix = "telegram.bot", name = "legacy-enabled", havingValue = "true")
 public class ToDoItemBotController  implements SpringLongPollingBot, LongPollingSingleThreadUpdateConsumer {
 	private static final Pattern REGISTER_USER_COMMAND_PATTERN = Pattern.compile("^/?registeruser(?:@\\w+)?(?:\\s+.*)?$", Pattern.CASE_INSENSITIVE);
 	private static final Pattern START_COMMAND_PATTERN = Pattern.compile("^/?start(?:@\\w+)?(?:\\s+-d)?\\s*$", Pattern.CASE_INSENSITIVE);
@@ -162,5 +164,4 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
     }
 
 }
-
 

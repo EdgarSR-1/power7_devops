@@ -10,5 +10,6 @@ import java.util.Optional;
 @Repository
 public interface TaskGroupRepository extends JpaRepository<TaskGroup, Long> {
 	List<TaskGroup> findByCreatedById(Long userId);
-  Optional<TaskGroup> findFirstByOrderByIdAsc();
+	boolean existsByIdAndCreatedById(Long id, Long userId);
+	  Optional<TaskGroup> findFirstByOrderByIdAsc();
 }

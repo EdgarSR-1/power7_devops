@@ -1,5 +1,6 @@
 package com.springboot.MyTodoList;
 
+import com.springboot.MyTodoList.config.AiProps;
 import com.springboot.MyTodoList.config.BotProps;
 import com.springboot.MyTodoList.config.DeepSeekConfig;
 import com.springboot.MyTodoList.dto.SprintRequestDTO;
@@ -15,7 +16,7 @@ import org.slf4j.LoggerFactory;
 import java.time.LocalDateTime;
 
 @SpringBootApplication
-@EnableConfigurationProperties(BotProps.class)
+@EnableConfigurationProperties({BotProps.class, AiProps.class})
 @Import(DeepSeekConfig.class)
 public class MyTodoListApplication {
 

@@ -11,17 +11,16 @@ docker_platform="${DOCKER_PLATFORM:-}"
 docker_memory="${DOCKER_MEMORY:-1g}"
 docker_cpus="${DOCKER_CPUS:-2}"
 
-build_args=()
-if [[ -n "$docker_platform" ]]; then
-	build_args+=(--platform "$docker_platform")
-fi
-
 docker stop "$container_name" 2>/dev/null || true
 docker rm -f "$container_name" 2>/dev/null || true
 docker rmi "$image_name" 2>/dev/null || true
 
 mvn clean verify
-docker build -f Dockerfile "${build_args[@]}" -t "$image_name" .
+if [[ -n "$docker_platform" ]]; then
+	docker build -f Dockerfile --platform "$docker_platform" -t "$image_name" .
+else
+	docker build -f Dockerfile -t "$image_name" .
+fi
 
 run_args=(--name "$container_name" \
 	--memory "$docker_memory" \

@@ -17,7 +17,9 @@ import com.springboot.MyTodoList.repository.TaskGroupRepository;
 import com.springboot.MyTodoList.repository.TaskRepository;
 import com.springboot.MyTodoList.repository.TodoListRepository;
 import com.springboot.MyTodoList.repository.UserRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -153,15 +155,10 @@ public class TaskService {
         if (isSuperAdmin(currentUser)) {
             tasks = taskRepository.findAll();
         } else {
-            List<GroupMember> memberships = groupMemberRepository.findByUserId(currentUser.getId());
-            List<Long> groupIds = memberships.stream()
-                    .map(groupMember -> groupMember.getGroup().getId())
-                    .collect(Collectors.toList());
-
             tasks = taskRepository.findAll().stream()
                     .filter(task -> {
                         Long taskGroupId = extractGroupId(task);
-                        return taskGroupId != null && groupIds.contains(taskGroupId);
+                        return canAccessGroup(currentUser, taskGroupId);
                     })
                     .collect(Collectors.toList());
         }
@@ -205,7 +202,7 @@ public class TaskService {
         return tasks.stream()
                 .filter(task -> {
                     Long groupId = extractGroupId(task);
-                    return belongsToGroup(currentUser, groupId);
+                    return canAccessGroup(currentUser, groupId);
                 })
                 .collect(Collectors.toList());
     }
@@ -353,31 +350,39 @@ public class TaskService {
         return todoList.getGroup().getId();
     }
 
-    private boolean belongsToGroup(User user, Long groupId) {
+    private boolean canAccessGroup(User user, Long groupId) {
         if (user == null || user.getId() == null || groupId == null) {
             return false;
         }
 
-        return groupMemberRepository.existsByGroupIdAndUserId(groupId, user.getId());
+        if (groupMemberRepository.existsByGroupIdAndUserId(groupId, user.getId())) {
+            return true;
+        }
+
+        if (taskGroupRepository.existsByIdAndCreatedById(groupId, user.getId())) {
+            return true;
+        }
+
+        return taskRepository.existsByCreatedByIdAndTodoListGroupId(user.getId(), groupId);
     }
 
     private void validateGroupAccess(User currentUser, Long groupId) {
         if (currentUser == null) {
-            throw new RuntimeException("Unauthorized");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
         }
 
         if (isSuperAdmin(currentUser)) {
             return;
         }
 
-        if (!belongsToGroup(currentUser, groupId)) {
-            throw new RuntimeException("You do not have access to this group");
+        if (!canAccessGroup(currentUser, groupId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this group");
         }
     }
 
     private void validateTaskReadAccess(User currentUser, Task task) {
         if (currentUser == null) {
-            throw new RuntimeException("Unauthorized");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
         }
 
         if (isSuperAdmin(currentUser)) {
@@ -385,14 +390,14 @@ public class TaskService {
         }
 
         Long groupId = extractGroupId(task);
-        if (!belongsToGroup(currentUser, groupId)) {
-            throw new RuntimeException("You do not have access to this task");
+        if (!canAccessGroup(currentUser, groupId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this task");
         }
     }
 
     private void validateTaskEditAccess(User currentUser, Task task) {
         if (currentUser == null) {
-            throw new RuntimeException("Unauthorized");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
         }
 
         if (isSuperAdmin(currentUser)) {
@@ -402,24 +407,24 @@ public class TaskService {
         Long groupId = extractGroupId(task);
 
         if (isAdmin(currentUser)) {
-            if (!belongsToGroup(currentUser, groupId)) {
-                throw new RuntimeException("You do not have access to this task");
+            if (!canAccessGroup(currentUser, groupId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this task");
             }
             return;
         }
 
         if (isUsuario(currentUser)) {
-            if (!belongsToGroup(currentUser, groupId)) {
-                throw new RuntimeException("You do not have access to this task");
+            if (!canAccessGroup(currentUser, groupId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not have access to this task");
             }
 
             if (task.getCreatedBy() == null || !task.getCreatedBy().getId().equals(currentUser.getId())) {
-                throw new RuntimeException("You can only modify your own tasks");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only modify your own tasks");
             }
             return;
         }
 
-        throw new RuntimeException("Unauthorized");
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized");
     }
 
     private TaskResponseDTO mapToResponseDTO(Task task) {
