@@ -1513,5 +1513,9 @@ public class BotActions{
 
     }
 
+    public boolean wasHandled() {
+        return exit;
+    }
+
 
 }

@@ -11,10 +11,8 @@ import java.util.Map;
 import java.util.StringJoiner;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @Component
-@ConditionalOnProperty(prefix = "app.bot", name = "mode", havingValue = "llm")
 public class AgentOrchestrator {
 
     private final LlmIntentParser llmIntentParser;
