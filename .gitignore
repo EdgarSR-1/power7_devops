@@ -61,3 +61,5 @@ frontend/yarn-error.log*
 /MtdrSpring/backend/Dockerfile
 /MtdrSpring/backend/wallet
 MtdrSpring/backend/DockerfileDev
+
+MtdrSpring/backend/src/main/resources/application.properties

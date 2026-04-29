@@ -5,6 +5,7 @@ import com.springboot.MyTodoList.model.Sprint;
 import com.springboot.MyTodoList.service.SprintService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -44,6 +45,7 @@ public class SprintController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<Sprint> create(@RequestBody SprintRequestDTO dto) {
         Sprint sprint = sprintService.createSprint(dto);
         return new ResponseEntity<>(sprint, HttpStatus.CREATED);
