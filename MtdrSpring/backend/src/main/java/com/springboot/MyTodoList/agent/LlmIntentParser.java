@@ -12,9 +12,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.client.RestClient;
 
 @Component
+@ConditionalOnProperty(prefix = "app.bot", name = "mode", havingValue = "llm")
 public class LlmIntentParser implements IntentParser {
 
     private static final Logger logger = LoggerFactory.getLogger(LlmIntentParser.class);

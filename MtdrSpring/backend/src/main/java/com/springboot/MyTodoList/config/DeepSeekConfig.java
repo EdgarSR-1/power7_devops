@@ -6,8 +6,10 @@ import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @Configuration
+@ConditionalOnProperty(prefix = "app.bot", name = "mode", havingValue = "llm")
 public class DeepSeekConfig {
     
     @Value("${deepseek.api.key}")
