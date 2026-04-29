@@ -1,32 +1,32 @@
 name: backend-lint
 
 on:
-    push:
-        branches:
-			- main
-			- develop
-	pull_request:
-		branches:
-			- main
-			- develop
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
 
 jobs:
-	backend-check:
-		runs-on: ubuntu-latest
-		defaults:
-			run:
-				working-directory: MtdrSpring/backend
+  backend-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: MtdrSpring/backend
 
-		steps:
-			- name: Checkout
-				uses: actions/checkout@v4
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-			- name: Set up JDK
-				uses: actions/setup-java@v4
-				with:
-					distribution: temurin
-					java-version: '21'
-					cache: maven
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
 
-			- name: Run backend tests
-				run: ./mvnw -B -Dspring.profiles.active=local test
+      - name: Run backend tests
+        run: ./mvnw -B -Dspring.profiles.active=local test
