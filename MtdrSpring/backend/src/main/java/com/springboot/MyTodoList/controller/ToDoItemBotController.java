@@ -160,7 +160,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 		actions.fnElse();
 
 		if (!actions.wasHandled()) {
-			String llmResponse = agentOrchestrator.handleMessage(messageTextFromTelegram);
+			String llmResponse = agentOrchestrator.handleMessage(messageTextFromTelegram, requesterUser.orElse(null));
 			BotHelper.sendMessageToTelegram(chatId, llmResponse, telegramClient);
 		}
 

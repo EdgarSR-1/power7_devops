@@ -6,7 +6,9 @@ public class ParsedIntent {
     private String assignee;
     private String status;
     private String title;
+    private Long taskId;
     private Integer storyPoints;
+    private String groupName;
     private String sprintName;
     private boolean clarificationNeeded;
     private String clarificationQuestion;
@@ -43,12 +45,28 @@ public class ParsedIntent {
         this.title = title;
     }
 
+    public Long getTaskId() {
+        return taskId;
+    }
+
+    public void setTaskId(Long taskId) {
+        this.taskId = taskId;
+    }
+
     public Integer getStoryPoints() {
         return storyPoints;
     }
 
     public void setStoryPoints(Integer storyPoints) {
         this.storyPoints = storyPoints;
+    }
+
+    public String getGroupName() {
+        return groupName;
+    }
+
+    public void setGroupName(String groupName) {
+        this.groupName = groupName;
     }
 
     public String getSprintName() {

@@ -9,7 +9,10 @@ import org.springframework.stereotype.Component;
 public class RuleBasedIntentParser implements IntentParser {
 
     private static final Pattern CREATE_TASK_PATTERN =
-        Pattern.compile("crea(?:r)? una tarea para (.+?)(?: y asigna(?:la)? a ([a-zA-ZáéíóúÁÉÍÓÚñÑ ]+))?(?: con (\\d+) puntos?)?$", Pattern.CASE_INSENSITIVE);
+        Pattern.compile("crea(?:r)? una tarea para (.+?)(?: en grupo ([a-zA-ZáéíóúÁÉÍÓÚñÑ0-9 _\\-]+))?(?: y asigna(?:la)? a ([a-zA-ZáéíóúÁÉÍÓÚñÑ ]+))?(?: con (\\d+) puntos?)?$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TASK_ID_PATTERN = Pattern.compile("(?:tarea|task)\\s*#?\\s*(\\d+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TASK_ID_FALLBACK_PATTERN = Pattern.compile("#(\\d+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern HOURS_PATTERN = Pattern.compile("(?:con|de)\\s+(\\d+)\\s*(?:puntos?|horas?)", Pattern.CASE_INSENSITIVE);
 
     @Override
     public ParsedIntent parse(String messageText) {
@@ -72,6 +75,36 @@ public class RuleBasedIntentParser implements IntentParser {
             }
         }
 
+        // Direct task lifecycle actions by task id.
+        Long taskId = extractTaskId(normalized);
+        if (taskId != null) {
+            if (normalized.matches(".*(elimina|eliminar|borra|borrar|delete).*(tarea|task).*")) {
+                intent.setIntent(IntentType.DELETE_TASK);
+                intent.setTaskId(taskId);
+                return intent;
+            }
+
+            if (normalized.matches(".*(reabre|reabrir|undo|deshacer|quitar.*terminad|marcar.*pendient).*(tarea|task).*")) {
+                intent.setIntent(IntentType.REOPEN_TASK);
+                intent.setTaskId(taskId);
+                return intent;
+            }
+
+            if (normalized.matches(".*(completa|completar|termina|terminar|finaliza|finalizar|done).*(tarea|task).*")) {
+                intent.setIntent(IntentType.COMPLETE_TASK);
+                intent.setTaskId(taskId);
+                intent.setStoryPoints(extractHoursAsInteger(text));
+                return intent;
+            }
+
+            if (normalized.matches(".*(inicia|iniciar|start|comienza|poner).*(tarea|task).*(progreso|in progress)?")
+                || normalized.matches(".*(tarea|task).*(en progreso|in progress).*")) {
+                intent.setIntent(IntentType.START_TASK);
+                intent.setTaskId(taskId);
+                return intent;
+            }
+        }
+
         // LIST_TASKS_BY_STATUS intent
         if (normalized.matches(".*(tareas|actividades).*(pendiente|progreso|en proceso|in progress|done|terminada|completada|hecha).*") ||
             normalized.matches(".*(que|muestra?).*(tareas|actividades|trabajos).*(siguen|están|estan).*") ||
@@ -91,6 +124,15 @@ public class RuleBasedIntentParser implements IntentParser {
             return intent;
         }
 
+        // LIST_TASKS_BY_SPRINT intent
+        if (normalized.matches(".*(tareas|lista).*(del?|de la).*(sprint).*") ||
+            normalized.matches(".*(muestra|dame|quiero ver).*(tareas).*(sprint).*") ||
+            normalized.matches(".*(tareas).*(sprint actual).*") ) {
+            intent.setIntent(IntentType.LIST_TASKS_BY_SPRINT);
+            intent.setSprintName(extractSprintName(text));
+            return intent;
+        }
+
         // LIST_TASKS intent
         if (normalized.matches(".*(lista|todas?).*(tareas|actividades|trabajos|todos).*") ||
             normalized.matches(".*(muestra?|dame|quiero ver).*(tareas|todo|lista).*") ||
@@ -106,8 +148,9 @@ public class RuleBasedIntentParser implements IntentParser {
         if (matcher.find()) {
             intent.setIntent(IntentType.CREATE_TASK);
             intent.setTitle(matcher.group(1) == null ? null : matcher.group(1).trim());
-            intent.setAssignee(matcher.group(2) == null ? null : capitalize(matcher.group(2).trim()));
-            intent.setStoryPoints(matcher.group(3) == null ? null : Integer.parseInt(matcher.group(3)));
+            intent.setGroupName(matcher.group(2) == null ? null : matcher.group(2).trim());
+            intent.setAssignee(matcher.group(3) == null ? null : capitalize(matcher.group(3).trim()));
+            intent.setStoryPoints(matcher.group(4) == null ? null : Integer.parseInt(matcher.group(4)));
             return intent;
         }
 
@@ -119,6 +162,50 @@ public class RuleBasedIntentParser implements IntentParser {
     
     private String cleanName(String name) {
         return name.replaceAll("[^a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]", "").trim();
+    }
+
+    private Long extractTaskId(String normalized) {
+        Matcher matcher = TASK_ID_PATTERN.matcher(normalized);
+        if (matcher.find()) {
+            return Long.parseLong(matcher.group(1));
+        }
+
+        Matcher fallback = TASK_ID_FALLBACK_PATTERN.matcher(normalized);
+        if (fallback.find()) {
+            return Long.parseLong(fallback.group(1));
+        }
+        return null;
+    }
+
+    private String extractSprintName(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+
+        String normalized = text.trim();
+        String lower = normalized.toLowerCase(Locale.ROOT);
+        if (lower.contains("sprint actual")) {
+            return null;
+        }
+
+        Matcher matcher = Pattern.compile("sprint\\s+([\\p{L}0-9 _\\-]+)", Pattern.CASE_INSENSITIVE).matcher(normalized);
+        if (matcher.find()) {
+            String value = matcher.group(1).trim();
+            return value.isBlank() ? null : value;
+        }
+        return null;
+    }
+
+    private Integer extractHoursAsInteger(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+
+        Matcher matcher = HOURS_PATTERN.matcher(text);
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(1));
+        }
+        return null;
     }
 
     private String capitalize(String value) {

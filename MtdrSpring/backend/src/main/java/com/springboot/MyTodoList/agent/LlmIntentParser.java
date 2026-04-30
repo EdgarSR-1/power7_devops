@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -54,7 +53,12 @@ public class LlmIntentParser implements IntentParser {
                 "- LIST_TASKS: Usuario quiere ver todas las tareas o la lista completa\n" +
                 "- LIST_TASKS_BY_ASSIGNEE: Usuario quiere tareas asignadas a una persona especifica\n" +
                 "- LIST_TASKS_BY_STATUS: Usuario quiere tareas con un estado especifico (PENDING, IN_PROGRESS, DONE)\n" +
+                "- LIST_TASKS_BY_SPRINT: Usuario quiere tareas de un sprint especifico o del sprint actual\n" +
                 "- CREATE_TASK: Usuario quiere crear una nueva tarea\n" +
+                "- START_TASK: Usuario quiere iniciar una tarea y pasarla a IN_PROGRESS\n" +
+                "- COMPLETE_TASK: Usuario quiere marcar una tarea como terminada\n" +
+                "- REOPEN_TASK: Usuario quiere quitar estado de terminada y devolverla a pendiente\n" +
+                "- DELETE_TASK: Usuario quiere eliminar una tarea\n" +
                 "- CURRENT_SPRINT_SUMMARY: Usuario quiere resumen o estado del sprint actual\n" +
                 "- TEAM_LOAD_SUMMARY: Usuario quiere ver la carga de trabajo del equipo\n" +
                 "- GUACAMOLE_RECIPE: Usuario pregunta como hacer, preparar o servir guacamole\n" +
@@ -71,7 +75,9 @@ public class LlmIntentParser implements IntentParser {
                 "  \"assignee\": \"nombre_persona_o_null\",\n" +
                 "  \"status\": \"PENDING|IN_PROGRESS|DONE_o_null\",\n" +
                 "  \"title\": \"titulo_de_tarea_o_null\",\n" +
+                "  \"taskId\": numero_o_null,\n" +
                 "  \"storyPoints\": numero_o_null,\n" +
+                "  \"groupName\": \"nombre_grupo_o_null\",\n" +
                 "  \"sprintName\": \"nombre_sprint_o_null\",\n" +
                 "  \"clarificationNeeded\": true|false,\n" +
                 "  \"clarificationQuestion\": \"pregunta_si_necesita_aclaracion_o_null\"\n" +
@@ -79,25 +85,43 @@ public class LlmIntentParser implements IntentParser {
                 "\n" +
                 "Ejemplos de entrada y salida esperada:\n" +
                 "Entrada: \"¿Qué tareas tiene Ana?\"\n" +
-                "Salida: {\"intent\":\"LIST_TASKS_BY_ASSIGNEE\",\"assignee\":\"Ana\",\"status\":null,\"title\":null,\"storyPoints\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
+                "Salida: {\"intent\":\"LIST_TASKS_BY_ASSIGNEE\",\"assignee\":\"Ana\",\"status\":null,\"title\":null,\"taskId\":null,\"storyPoints\":null,\"groupName\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
                 "\n" +
                 "Entrada: \"Dame la lista de tareas pendientes\"\n" +
-                "Salida: {\"intent\":\"LIST_TASKS_BY_STATUS\",\"assignee\":null,\"status\":\"PENDING\",\"title\":null,\"storyPoints\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
+                "Salida: {\"intent\":\"LIST_TASKS_BY_STATUS\",\"assignee\":null,\"status\":\"PENDING\",\"title\":null,\"taskId\":null,\"storyPoints\":null,\"groupName\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
                 "\n" +
-                "Entrada: \"Crea una tarea para revisar el codigo y asignala a Juan con 5 puntos\"\n" +
-                "Salida: {\"intent\":\"CREATE_TASK\",\"assignee\":\"Juan\",\"status\":null,\"title\":\"revisar el codigo\",\"storyPoints\":5,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
+                "Entrada: \"Crea una tarea para revisar el codigo en grupo Backend y asignala a Juan con 5 puntos\"\n" +
+                "Salida: {\"intent\":\"CREATE_TASK\",\"assignee\":\"Juan\",\"status\":null,\"title\":\"revisar el codigo\",\"taskId\":null,\"storyPoints\":5,\"groupName\":\"Backend\",\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
+                "\n" +
+                "Entrada: \"Inicia la tarea 23\"\n" +
+                "Salida: {\"intent\":\"START_TASK\",\"assignee\":null,\"status\":null,\"title\":null,\"taskId\":23,\"storyPoints\":null,\"groupName\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
+                "\n" +
+                "Entrada: \"Marca la tarea #23 como terminada\"\n" +
+                "Salida: {\"intent\":\"COMPLETE_TASK\",\"assignee\":null,\"status\":null,\"title\":null,\"taskId\":23,\"storyPoints\":null,\"groupName\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
+                "\n" +
+                "Entrada: \"Reabre la tarea 23\"\n" +
+                "Salida: {\"intent\":\"REOPEN_TASK\",\"assignee\":null,\"status\":null,\"title\":null,\"taskId\":23,\"storyPoints\":null,\"groupName\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
+                "\n" +
+                "Entrada: \"Elimina la tarea 23\"\n" +
+                "Salida: {\"intent\":\"DELETE_TASK\",\"assignee\":null,\"status\":null,\"title\":null,\"taskId\":23,\"storyPoints\":null,\"groupName\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
+                "\n" +
+                "Entrada: \"Dame tareas del sprint Beta\"\n" +
+                "Salida: {\"intent\":\"LIST_TASKS_BY_SPRINT\",\"assignee\":null,\"status\":null,\"title\":null,\"taskId\":null,\"storyPoints\":null,\"groupName\":null,\"sprintName\":\"Beta\",\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
                 "\n" +
                 "Entrada: \"¿Cómo va el sprint?\"\n" +
-                "Salida: {\"intent\":\"CURRENT_SPRINT_SUMMARY\",\"assignee\":null,\"status\":null,\"title\":null,\"storyPoints\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
+                "Salida: {\"intent\":\"CURRENT_SPRINT_SUMMARY\",\"assignee\":null,\"status\":null,\"title\":null,\"taskId\":null,\"storyPoints\":null,\"groupName\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
                 "\n" +
                 "Entrada: \"¿Quién tiene más trabajo?\"\n" +
-                "Salida: {\"intent\":\"TEAM_LOAD_SUMMARY\",\"assignee\":null,\"status\":null,\"title\":null,\"storyPoints\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
+                "Salida: {\"intent\":\"TEAM_LOAD_SUMMARY\",\"assignee\":null,\"status\":null,\"title\":null,\"taskId\":null,\"storyPoints\":null,\"groupName\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
                 "\n" +
                 "Entrada: \"¿Cómo hacer un guacamole?\"\n" +
-                "Salida: {\"intent\":\"GUACAMOLE_RECIPE\",\"assignee\":null,\"status\":null,\"title\":null,\"storyPoints\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
+                "Salida: {\"intent\":\"GUACAMOLE_RECIPE\",\"assignee\":null,\"status\":null,\"title\":null,\"taskId\":null,\"storyPoints\":null,\"groupName\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
                 "\n" +
                 "Reglas importantes:\n" +
-                "- Si la intencion es CREATE_TASK pero falta el titulo, establece clarificationNeeded=true\n" +
+                "- Si la intencion es CREATE_TASK y falta titulo o groupName, establece clarificationNeeded=true\n" +
+                "- Si la intencion es CREATE_TASK y faltan horas estimadas, establece clarificationNeeded=true pidiendo 'con N puntos'\n" +
+                "- Si la intencion es COMPLETE_TASK y faltan horas reales, establece clarificationNeeded=true pidiendo 'con N puntos'\n" +
+                "- Si la intencion es START_TASK, COMPLETE_TASK, REOPEN_TASK o DELETE_TASK y no hay taskId, establece clarificationNeeded=true\n" +
                 "- Identifica nombres de personas con flexibilidad (Ana, ana, ANA, etc.)\n" +
                 "- Identifica estados con sinonimos: (done, completada, hecha, terminada) => DONE; (pendiente, por hacer, sin hacer) => PENDING; (progreso, en proceso, haciendo, in progress) => IN_PROGRESS\n" +
                 "- No inventes nuevas intenciones fuera de la lista permitida\n" +
