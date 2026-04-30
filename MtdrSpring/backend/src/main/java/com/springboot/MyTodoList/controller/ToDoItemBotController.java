@@ -6,6 +6,7 @@ import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.SprintService;
 import com.springboot.MyTodoList.service.TaskGroupService;
 import com.springboot.MyTodoList.service.TaskService;
+import com.springboot.MyTodoList.service.TaskEstimationService;
 import com.springboot.MyTodoList.service.ToDoItemService;
 import com.springboot.MyTodoList.service.UserService;
 import com.springboot.MyTodoList.util.BotActions;
@@ -41,6 +42,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 	private TaskService taskService;
 	private TaskGroupService taskGroupService;
 	private UserService userService;
+	private TaskEstimationService taskEstimationService;
 	private final AgentOrchestrator agentOrchestrator;
 	private final TelegramClient telegramClient;
 	
@@ -60,7 +62,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
     }
 
 
-	public ToDoItemBotController(BotProps bp, ToDoItemService tsvc, DeepSeekService ds, SprintService sprintSvc, TaskService taskSvc, TaskGroupService groupSvc, UserService userSvc, AgentOrchestrator agentOrchestrator) {
+	public ToDoItemBotController(BotProps bp, ToDoItemService tsvc, DeepSeekService ds, SprintService sprintSvc, TaskService taskSvc, TaskGroupService groupSvc, UserService userSvc, TaskEstimationService taskEstimationSvc, AgentOrchestrator agentOrchestrator) {
 		this.botProps = bp;
 		this.agentOrchestrator = agentOrchestrator;
 		telegramClient = new OkHttpTelegramClient(getBotToken());
@@ -70,6 +72,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 		taskService = taskSvc;
 		taskGroupService = groupSvc;
 		userService = userSvc;
+		taskEstimationService = taskEstimationSvc;
 	}
 
 	@Override
@@ -120,7 +123,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 			return;
 		}
 
-		BotActions actions = new BotActions(telegramClient, toDoItemService, deepSeekService, sprintService, taskService, taskGroupService, userService);
+		BotActions actions = new BotActions(telegramClient, toDoItemService, deepSeekService, sprintService, taskService, taskGroupService, userService, taskEstimationService);
 		actions.setRequestText(messageTextFromTelegram);
 		actions.setChatId(chatId);
 		actions.setTelegramUserId(telegramUserId);

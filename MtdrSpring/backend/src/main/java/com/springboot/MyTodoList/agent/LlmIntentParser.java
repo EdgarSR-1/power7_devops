@@ -75,6 +75,7 @@ public class LlmIntentParser implements IntentParser {
                 "  \"assignee\": \"nombre_persona_o_null\",\n" +
                 "  \"status\": \"PENDING|IN_PROGRESS|DONE_o_null\",\n" +
                 "  \"title\": \"titulo_de_tarea_o_null\",\n" +
+                    "  \"description\": \"descripcion_detallada_o_null\",\n" +
                 "  \"taskId\": numero_o_null,\n" +
                 "  \"storyPoints\": numero_o_null,\n" +
                 "  \"groupName\": \"nombre_grupo_o_null\",\n" +
@@ -91,7 +92,7 @@ public class LlmIntentParser implements IntentParser {
                 "Salida: {\"intent\":\"LIST_TASKS_BY_STATUS\",\"assignee\":null,\"status\":\"PENDING\",\"title\":null,\"taskId\":null,\"storyPoints\":null,\"groupName\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
                 "\n" +
                 "Entrada: \"Crea una tarea para revisar el codigo en grupo Backend y asignala a Juan con 5 puntos\"\n" +
-                "Salida: {\"intent\":\"CREATE_TASK\",\"assignee\":\"Juan\",\"status\":null,\"title\":\"revisar el codigo\",\"taskId\":null,\"storyPoints\":5,\"groupName\":\"Backend\",\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
+                    "Salida: {\"intent\":\"CREATE_TASK\",\"assignee\":\"Juan\",\"status\":null,\"title\":\"revisar el codigo\",\"description\":\"Revisar el codigo de la API para asegurar calidad\",\"taskId\":null,\"storyPoints\":5,\"groupName\":\"Backend\",\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
                 "\n" +
                 "Entrada: \"Inicia la tarea 23\"\n" +
                 "Salida: {\"intent\":\"START_TASK\",\"assignee\":null,\"status\":null,\"title\":null,\"taskId\":23,\"storyPoints\":null,\"groupName\":null,\"sprintName\":null,\"clarificationNeeded\":false,\"clarificationQuestion\":null}\n" +
@@ -119,7 +120,7 @@ public class LlmIntentParser implements IntentParser {
                 "\n" +
                 "Reglas importantes:\n" +
                 "- Si la intencion es CREATE_TASK y falta titulo o groupName, establece clarificationNeeded=true\n" +
-                "- Si la intencion es CREATE_TASK y faltan horas estimadas, establece clarificationNeeded=true pidiendo 'con N puntos'\n" +
+                    "- Si la intencion es CREATE_TASK y faltan horas estimadas, NO establecas clarificationNeeded; el sistema las estimara automaticamente\n" +
                 "- Si la intencion es COMPLETE_TASK y faltan horas reales, establece clarificationNeeded=true pidiendo 'con N puntos'\n" +
                 "- Si la intencion es START_TASK, COMPLETE_TASK, REOPEN_TASK o DELETE_TASK y no hay taskId, establece clarificationNeeded=true\n" +
                 "- Identifica nombres de personas con flexibilidad (Ana, ana, ANA, etc.)\n" +

@@ -6,6 +6,7 @@ public class ParsedIntent {
     private String assignee;
     private String status;
     private String title;
+        private String description;
     private Long taskId;
     private Integer storyPoints;
     private String groupName;
@@ -92,5 +93,13 @@ public class ParsedIntent {
     public void setClarificationQuestion(String clarificationQuestion) {
         this.clarificationQuestion = clarificationQuestion;
     }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public void setDescription(String description) {
+            this.description = description;
+        }
 }
 

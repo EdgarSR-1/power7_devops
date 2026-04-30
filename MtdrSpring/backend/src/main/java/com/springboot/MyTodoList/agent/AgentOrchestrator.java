@@ -8,6 +8,7 @@ import com.springboot.MyTodoList.repository.SprintRepository;
 import com.springboot.MyTodoList.repository.TaskRepository;
 import com.springboot.MyTodoList.service.TaskGroupService;
 import com.springboot.MyTodoList.service.TaskService;
+import com.springboot.MyTodoList.service.TaskEstimationService;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -29,18 +30,21 @@ public class AgentOrchestrator {
     private final TaskRepository taskRepository;
     private final TaskService taskService;
     private final TaskGroupService taskGroupService;
+        private final TaskEstimationService taskEstimationService;
 
     public AgentOrchestrator(
             LlmIntentParser llmIntentParser,
             SprintRepository sprintRepository,
             TaskRepository taskRepository,
             TaskService taskService,
-            TaskGroupService taskGroupService) {
+                TaskGroupService taskGroupService,
+                TaskEstimationService taskEstimationService) {
         this.llmIntentParser = llmIntentParser;
         this.sprintRepository = sprintRepository;
         this.taskRepository = taskRepository;
         this.taskService = taskService;
         this.taskGroupService = taskGroupService;
+            this.taskEstimationService = taskEstimationService;
     }
 
     public String handleMessage(String messageText) {
@@ -109,11 +113,18 @@ public class AgentOrchestrator {
             return "Necesito el titulo de la tarea para poder crearla.";
         }
 
-        if (parsedIntent.getStoryPoints() == null) {
-            return "Para crear la tarea necesito las horas estimadas. Ejemplo: crea una tarea para revisar API en grupo Backend con 3 puntos.";
-        }
+            Float estimatedHours = null;
+            if (parsedIntent.getStoryPoints() == null) {
+                // Estimar automáticamente si no se proporcionan horas explícitamente
+                estimatedHours = taskEstimationService.estimateTaskHours(
+                    parsedIntent.getTitle(),
+                    parsedIntent.getDescription()
+                );
+            } else {
+                estimatedHours = parsedIntent.getStoryPoints().floatValue();
+            }
 
-        if (parsedIntent.getStoryPoints() <= 0 || parsedIntent.getStoryPoints() > 40) {
+            if (estimatedHours == null || estimatedHours <= 0 || estimatedHours > 40) {
             return "Las horas estimadas deben estar entre 1 y 40.";
         }
 
@@ -151,7 +162,6 @@ public class AgentOrchestrator {
         }
 
         try {
-            Float estimatedHours = parsedIntent.getStoryPoints().floatValue();
             TaskResponseDTO created = taskService.createTaskInGroupWithHours(
                     selectedGroup.getId(),
                     parsedIntent.getTitle().trim(),
@@ -160,12 +170,14 @@ public class AgentOrchestrator {
             );
 
             String sprintLabel = created.getSprintName() != null ? created.getSprintName() : "Sin sprint";
-            return "Tarea creada correctamente.\n" +
+                String hoursSource = parsedIntent.getStoryPoints() == null ? "(estimada automáticamente)" : "(especificadas)";
+                return "✅ Tarea creada correctamente.\n" +
                 "ID: #" + created.getId() + "\n" +
                 "Titulo: " + created.getTitle() + "\n" +
                 "Estado: " + created.getStatus() + "\n" +
                 "Grupo: " + selectedGroup.getName() + "\n" +
-                "Sprint: " + sprintLabel;
+                    "Sprint: " + sprintLabel + "\n" +
+                    "Horas estimadas: " + estimatedHours + " " + hoursSource;
         } catch (Exception ex) {
             return "No pude crear la tarea: " + ex.getMessage();
         }

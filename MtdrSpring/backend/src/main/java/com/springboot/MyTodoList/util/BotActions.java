@@ -10,6 +10,7 @@ import com.springboot.MyTodoList.model.ToDoItem;
 import com.springboot.MyTodoList.model.User;
 import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.SprintService;
+import com.springboot.MyTodoList.service.TaskEstimationService;
 import com.springboot.MyTodoList.service.TaskGroupService;
 import com.springboot.MyTodoList.service.TaskService;
 import com.springboot.MyTodoList.service.ToDoItemService;
@@ -66,6 +67,7 @@ public class BotActions{
                 );
     private static final Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, String> pendingTaskTitleByChat = new ConcurrentHashMap<>();
+    private static final Map<Long, Float> pendingSuggestedHoursByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Boolean> pendingCreateSprintByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> pendingMoveSprintTaskByChat = new ConcurrentHashMap<>();
@@ -86,8 +88,9 @@ public class BotActions{
     TaskService taskService;
     TaskGroupService taskGroupService;
     UserService userService;
+    TaskEstimationService taskEstimationService;
 
-    public BotActions(TelegramClient tc, ToDoItemService ts, DeepSeekService ds, SprintService ss, TaskService tks, TaskGroupService tgs, UserService us){
+    public BotActions(TelegramClient tc, ToDoItemService ts, DeepSeekService ds, SprintService ss, TaskService tks, TaskGroupService tgs, UserService us, TaskEstimationService tes){
         telegramClient = tc;
         todoService = ts;
         deepSeekService = ds;
@@ -95,6 +98,7 @@ public class BotActions{
         taskService = tks;
         taskGroupService = tgs;
         userService = us;
+        taskEstimationService = tes;
         exit  = false;
     }
 
@@ -140,6 +144,14 @@ public class BotActions{
 
     public UserService getUserService(){
         return userService;
+    }
+
+    public void setTaskEstimationService(TaskEstimationService tes){
+        taskEstimationService = tes;
+    }
+
+    public TaskEstimationService getTaskEstimationService(){
+        return taskEstimationService;
     }
 
     private void clearTaskActionButtons() {
@@ -1166,40 +1178,71 @@ public class BotActions{
 
         try {
             String pendingTitle = pendingTaskTitleByChat.get(chatId);
+            Float suggestedHours = pendingSuggestedHoursByChat.get(chatId);
 
             if (pendingTitle == null) {
+                // Paso 1: Usuario proporciona título
                 pendingTaskTitleByChat.put(chatId, input);
-                BotHelper.sendMessageToTelegram(
-                        chatId,
-                        BotMessages.TYPE_NEW_TASK_ESTIMATED_HOURS.getMessage(),
-                        telegramClient
+                
+                // Paso 2: Sistema estima automáticamente las horas
+                Float estimatedHours = taskEstimationService.estimateTaskHours(input, null);
+                pendingSuggestedHoursByChat.put(chatId, estimatedHours);
+                
+                String suggestionMessage = String.format(
+                    "📌 Tarea: \"%s\"\n\n" +
+                    "🤖 Estimación automática: %.1f horas\n\n" +
+                    "Escribe:\n" +
+                    "• 'aceptar' para usar esta estimación\n" +
+                    "• O un número (ej: 3, 4.5) para cambiarla",
+                    input, estimatedHours
                 );
+                
+                BotHelper.sendMessageToTelegram(chatId, suggestionMessage, telegramClient);
                 exit = true;
                 return;
             }
 
+            // Paso 3: Usuario acepta o proporciona horas diferentes
             Float estimatedHours;
-            try {
-                estimatedHours = Float.parseFloat(input);
-            } catch (NumberFormatException e) {
-                sendMessageWithMainMenu(BotMessages.INVALID_HOURS.getMessage());
-                exit = true;
-                return;
+            if (input.toLowerCase().equals("aceptar")) {
+                estimatedHours = suggestedHours;
+            } else {
+                try {
+                    estimatedHours = Float.parseFloat(input);
+                } catch (NumberFormatException e) {
+                    sendMessageWithMainMenu("❌ Por favor, escribe un número válido (ej: 3, 4.5) o 'aceptar'");
+                    exit = true;
+                    return;
+                }
             }
 
             if (estimatedHours <= 0) {
-                sendMessageWithMainMenu("Hours must be greater than 0.");
+                sendMessageWithMainMenu("⚠️ Las horas deben ser mayor que 0.");
                 exit = true;
                 return;
             }
 
+            // Paso 4: Crear tarea con las horas confirmadas
             taskService.createTaskInGroupWithHours(selectedGroupId, pendingTitle, estimatedHours, requesterUser);
+            
+            String confirmationMessage = String.format(
+                "✅ Tarea creada!\n" +
+                "📋 Título: %s\n" +
+                "⏱️ Estimadas: %.1f horas",
+                pendingTitle, estimatedHours
+            );
+            
             pendingTaskGroupByChat.remove(chatId);
             pendingTaskTitleByChat.remove(chatId);
-            renderGroupTasksMenu(selectedGroupId, BotMessages.NEW_ITEM_ADDED.getMessage());
+            pendingSuggestedHoursByChat.remove(chatId);
+            
+            renderGroupTasksMenu(selectedGroupId, confirmationMessage);
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
-            BotHelper.sendMessageToTelegram(chatId, "Could not create task in selected group", telegramClient);
+            BotHelper.sendMessageToTelegram(chatId, "❌ No se pudo crear la tarea en el grupo seleccionado", telegramClient);
+            pendingTaskGroupByChat.remove(chatId);
+            pendingTaskTitleByChat.remove(chatId);
+            pendingSuggestedHoursByChat.remove(chatId);
         }
 
         exit = true;
