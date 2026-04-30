@@ -10,6 +10,7 @@ import com.springboot.MyTodoList.model.TaskGroup;
 import com.springboot.MyTodoList.model.TaskPriority;
 import com.springboot.MyTodoList.model.TaskStatus;
 import com.springboot.MyTodoList.model.TodoList;
+import com.springboot.MyTodoList.model.TaskAssignment;
 import com.springboot.MyTodoList.model.User;
 import com.springboot.MyTodoList.repository.GroupMemberRepository;
 import com.springboot.MyTodoList.repository.SprintRepository;
@@ -17,6 +18,7 @@ import com.springboot.MyTodoList.repository.TaskGroupRepository;
 import com.springboot.MyTodoList.repository.TaskRepository;
 import com.springboot.MyTodoList.repository.TodoListRepository;
 import com.springboot.MyTodoList.repository.UserRepository;
+import com.springboot.MyTodoList.repository.TaskAssignmentRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -34,19 +36,22 @@ public class TaskService {
     private final UserRepository userRepository;
     private final SprintRepository sprintRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final TaskAssignmentRepository taskAssignmentRepository;
 
     public TaskService(TaskRepository taskRepository,
                        TodoListRepository todoListRepository,
                        TaskGroupRepository taskGroupRepository,
                        UserRepository userRepository,
                        SprintRepository sprintRepository,
-                       GroupMemberRepository groupMemberRepository) {
+                       GroupMemberRepository groupMemberRepository,
+                       TaskAssignmentRepository taskAssignmentRepository) {
         this.taskRepository = taskRepository;
         this.todoListRepository = todoListRepository;
         this.taskGroupRepository = taskGroupRepository;
         this.userRepository = userRepository;
         this.sprintRepository = sprintRepository;
         this.groupMemberRepository = groupMemberRepository;
+        this.taskAssignmentRepository = taskAssignmentRepository;
     }
 
     public TaskResponseDTO createTask(TaskRequestDTO dto, User currentUser) {
@@ -99,6 +104,7 @@ public class TaskService {
         task.setDueDate(dto.getDueDate());
         task.setCreatedBy(createdBy);
         task.setSprint(sprint);
+        task.setEstimatedHours(dto.getEstimatedHours());
 
         Task savedTask = taskRepository.save(task);
         return mapToResponseDTO(savedTask);
@@ -390,44 +396,54 @@ public class TaskService {
         }
     }
 
-    private void validateTaskEditAccess(User currentUser, Task task) {
-        if (currentUser == null) {
-            throw new RuntimeException("Unauthorized");
-        }
-
-        if (isSuperAdmin(currentUser)) {
-            return;
-        }
-
-        Long groupId = extractGroupId(task);
-
-        if (isAdmin(currentUser)) {
-            if (!belongsToGroup(currentUser, groupId)) {
-                throw new RuntimeException("You do not have access to this task");
-            }
-            return;
-        }
-
-        if (isUsuario(currentUser)) {
-            if (!belongsToGroup(currentUser, groupId)) {
-                throw new RuntimeException("You do not have access to this task");
-            }
-
-            if (task.getCreatedBy() == null || !task.getCreatedBy().getId().equals(currentUser.getId())) {
-                throw new RuntimeException("You can only modify your own tasks");
-            }
-            return;
-        }
-
+  private void validateTaskEditAccess(User currentUser, Task task) {
+    if (currentUser == null) {
         throw new RuntimeException("Unauthorized");
     }
 
+    if (isSuperAdmin(currentUser)) {
+        return;
+    }
+
+    Long groupId = extractGroupId(task);
+
+    if (isAdmin(currentUser)) {
+        if (!belongsToGroup(currentUser, groupId)) {
+            throw new RuntimeException("You do not have access to this task");
+        }
+        return;
+    }
+
+    if (isUsuario(currentUser)) {
+        if (!belongsToGroup(currentUser, groupId)) {
+            throw new RuntimeException("You do not have access to this task");
+        }
+
+        boolean isAssignedToTask = taskAssignmentRepository.existsByTaskIdAndUserId(
+                task.getId(),
+                currentUser.getId()
+        );
+
+        if (!isAssignedToTask) {
+            throw new RuntimeException("You can only modify tasks assigned to you");
+        }
+
+        return;
+    }
+
+    throw new RuntimeException("Unauthorized");
+}
+
     private TaskResponseDTO mapToResponseDTO(Task task) {
-        String assigneeName = task.getCreatedBy() != null ? task.getCreatedBy().getName() : null;
+        List<TaskAssignment> assignments = taskAssignmentRepository.findByTaskId(task.getId());
+        String assigneeName = assignments.stream()
+            .map(a -> a.getUser().getName())
+            .collect(Collectors.joining(", "));
         String todoListName = task.getTodoList() != null ? task.getTodoList().getName() : null;
         String groupName = null;
         Long sprintId = task.getSprint() != null ? task.getSprint().getId() : null;
         String sprintName = task.getSprint() != null ? task.getSprint().getName() : null;
+        Float estimatedHours = task.getEstimatedHours();
 
         if (task.getTodoList() != null && task.getTodoList().getGroup() != null) {
             groupName = task.getTodoList().getGroup().getName();
@@ -447,7 +463,8 @@ public class TaskService {
                 todoListName,
                 assigneeName,
                 sprintId,
-                sprintName
+                sprintName,
+                estimatedHours
         );
     }
 }

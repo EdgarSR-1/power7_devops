@@ -17,6 +17,7 @@ public class TaskResponseDTO {
     private String assigneeName;
     private Long sprintId;
     private String sprintName;
+    private Float estimatedHours;
 
     public TaskResponseDTO() {
     }
@@ -25,7 +26,7 @@ public class TaskResponseDTO {
                            String priority, LocalDateTime startDate, LocalDateTime endDate,
                            LocalDateTime dueDate, LocalDateTime createdAt,
                            String groupName, String todoListName, String assigneeName,
-                           Long sprintId, String sprintName) {
+                           Long sprintId, String sprintName, Float estimatedHours) {
         this.id = id;
         this.title = title;
         this.description = description;
@@ -40,6 +41,7 @@ public class TaskResponseDTO {
         this.assigneeName = assigneeName;
         this.sprintId = sprintId;
         this.sprintName = sprintName;
+        this.estimatedHours = estimatedHours;
     }
 
     public Long getId() {
@@ -152,5 +154,13 @@ public class TaskResponseDTO {
 
     public void setSprintName(String sprintName) {
         this.sprintName = sprintName;
+    }
+
+    public Float getEstimatedHours() {
+        return estimatedHours;
+    }
+
+    public void setEstimatedHours(Float estimatedHours) {
+        this.estimatedHours = estimatedHours;
     }
 }
