@@ -6,6 +6,7 @@ import com.springboot.MyTodoList.dto.kpi.StatusDistributionDTO;
 import com.springboot.MyTodoList.dto.kpi.VelocityDTO;
 import com.springboot.MyTodoList.repository.TaskRepository;
 import com.springboot.MyTodoList.dto.kpi.CompletedTasksByUserSprintGroupDTO;
+import com.springboot.MyTodoList.dto.kpi.HoursBySprintDTO;
 import org.springframework.stereotype.Service;
 
 import java.util.stream.Collectors;
@@ -62,4 +63,22 @@ public class KpiService {
 
         return new VelocityDTO(average);
     }
+
+    public List<HoursBySprintDTO> getEstimatedHoursByUserSprintGroup(
+        Long groupId,
+        Long sprintId
+) {
+    return taskRepository.getEstimatedHoursByUserSprintGroupRaw(groupId, sprintId)
+            .stream()
+            .map(row -> new HoursBySprintDTO(
+                    ((Number) row[0]).longValue(),
+                    (String) row[1],
+                    ((Number) row[2]).longValue(),
+                    (String) row[3],
+                    ((Number) row[4]).longValue(),
+                    (String) row[5],
+                    row[6] == null ? 0.0 : ((Number) row[6]).doubleValue()
+            ))
+            .collect(Collectors.toList());
+}
 }

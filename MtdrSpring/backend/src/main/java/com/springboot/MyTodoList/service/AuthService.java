@@ -47,7 +47,8 @@ public class AuthService {
                 token,
                 savedUser.getId(),
                 savedUser.getName(),
-                savedUser.getEmail()
+                savedUser.getEmail(),
+                savedUser.getRole().getName().name()
         );
     }
 
@@ -85,7 +86,8 @@ public class AuthService {
                 token,
                 user.getId(),
                 user.getName(),
-                user.getEmail()
+                user.getEmail(),
+                user.getRole().getName().name()
         );
     }
 }

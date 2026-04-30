@@ -6,6 +6,7 @@ import com.springboot.MyTodoList.dto.kpi.StatusDistributionDTO;
 import com.springboot.MyTodoList.dto.kpi.VelocityDTO;
 import com.springboot.MyTodoList.service.KpiService;
 import com.springboot.MyTodoList.dto.kpi.CompletedTasksByUserSprintGroupDTO;
+import com.springboot.MyTodoList.dto.kpi.HoursBySprintDTO;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -46,5 +47,13 @@ public class KpiController {
         @RequestParam(required = false) Long sprintId
     ) {
     return kpiService.getCompletedTasksByUserSprintGroup(sprintId);
+    }
+
+    @GetMapping("/hours-by-sprint")
+    public List<HoursBySprintDTO> getEstimatedHoursByUserSprintGroup(
+        @RequestParam(required = false) Long groupId,
+        @RequestParam(required = false) Long sprintId
+    ) {
+    return kpiService.getEstimatedHoursByUserSprintGroup(groupId, sprintId);
     }
 }
