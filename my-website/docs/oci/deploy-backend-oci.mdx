@@ -1,0 +1,38 @@
+---
+sidebar_position: 10
+---
+
+# Deploy del backend en OCI
+
+Esta página será la bitácora mínima para dejar el despliegue limpio y repetible. La idea es avanzar en pasos pequeños y documentar solo lo que ya quedó validado.
+
+## Objetivo
+
+- Desplegar el backend con IP pública en OCI.
+- Evitar secretos o wallets dentro de la imagen Docker.
+- Separar configuración local, de build y de despliegue.
+
+## Lo que debe quedar fuera del repo o de la imagen
+
+- Credenciales de base de datos.
+- Oracle Wallet completo.
+- JWT secret.
+- Tokens de Telegram y otras APIs.
+- Passwords de UI o cuentas de servicio.
+
+## Orden de trabajo
+
+1. Limpiar la configuración confusa o hardcodeada.
+2. Definir cómo se inyectan secrets en OCI.
+3. Dejar un flujo de build backend independiente.
+4. Documentar el despliegue mínimo que sí funciona.
+
+## Estado actual
+
+- El backend ya tiene scripts de build y deploy.
+- La documentación existente mezcla setup local con despliegue.
+- Aún falta separar qué es local y qué es OCI.
+
+## Siguiente paso
+
+Documentar primero el inventario de secretos y variables necesarias para levantar el backend sin exponer información sensible.
