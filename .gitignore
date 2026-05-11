@@ -51,6 +51,9 @@ frontend/package-lock.json
 frontend/npm-debug.log*
 frontend/yarn-debug.log*
 frontend/yarn-error.log*
+/build/
+/.docusaurus/
+/docs/.docusaurus/
 /MtdrSpring/backend/Wallet_reacttodok7toc/
 /MtdrSpring/backend/Wallet_reacttodok7toc.zip
 /MtdrSpring/backend/Wallet_reacttodok7toc/cwallet.sso
@@ -61,3 +64,6 @@ frontend/yarn-error.log*
 /MtdrSpring/backend/Dockerfile
 /MtdrSpring/backend/wallet
 MtdrSpring/backend/DockerfileDev
+
+node_modules
+/videos/
