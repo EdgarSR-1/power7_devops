@@ -33,6 +33,66 @@ Esta página será la bitácora mínima para dejar el despliegue limpio y repeti
 - La documentación existente mezcla setup local con despliegue.
 - Aún falta separar qué es local y qué es OCI.
 
+## Inventario inicial
+
+### 1) Secretos que deben vivir fuera del repo
+
+Este grupo tiene 8 valores sensibles o semi-sensibles que no deben quedar embebidos en la imagen ni en archivos públicos:
+
+- `db_user`
+- `dbpassword`
+- `JWT_SECRET`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_BOT_NAME`
+- `DEEPSEEK_API_KEY`
+- `ui_username`
+- `ui_password`
+
+### 2) Variables de runtime que no son secreto, pero sí deben parametrizarse
+
+Estas 5 variables controlan el arranque y el despliegue, y conviene tratarlas como configuración por entorno:
+
+- `SPRING_PROFILES_ACTIVE`
+- `DEEPSEEK_API_URL`
+- `OCI_REGION`
+- `DOCKER_REGISTRY`
+- `TODO_PDB_NAME`
+
+### 3) Identificadores y datos OCI que conviene tener a mano
+
+Estos 7 datos no son secretos como tal, pero sí son valores de infraestructura que hay que recopilar para no depender de la shell ni de supuestos:
+
+- `ociTenancyOcid`
+- `ociUserOcid`
+- `ociCompartmentOcid`
+- `ociRegionIdentifier`
+- `mtdrDbName`
+- `runName`
+- `mtdrKey`
+
+### 4) Piezas OCI que ya aparecen en la configuración actual
+
+Hay al menos 8 elementos de infraestructura que conviene contar y documentar en el proceso:
+
+- Autonomous Database (ATP)
+- Object Storage namespace
+- OKE cluster
+- Node pool
+- VCN
+- Subnet de endpoint
+- Subnet de service load balancer
+- LoadBalancer de Kubernetes para exponer el backend
+
+### 5) Datos que todavía quiero separar del todo
+
+Quedan por clasificar con más cuidado, porque hoy están mezclados entre scripts, YAML y Terraform:
+
+- El wallet de Oracle como secreto montado en runtime
+- Los nombres de los secrets de Kubernetes (`db-wallet-secret`, `dbuser`, `frontendadmin`)
+- El namespace de despliegue
+- Las credenciales de la base externa donde vive la DB principal
+- La clave SSH pública del nodo de OKE si se mantiene en Terraform
+
 ## Siguiente paso
 
 Documentar primero el inventario de secretos y variables necesarias para levantar el backend sin exponer información sensible.
