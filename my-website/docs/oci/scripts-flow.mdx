@@ -6,22 +6,22 @@ sidebar_position: 14
 
 La idea es que una persona nueva vea rápido qué hace cada paso y dónde vive:
 
-- `setup.sh`: prepara estado, OCIDs, región, namespace y credenciales iniciales.
-- `build.sh`: construye localmente.
-- `deploy.sh`: publica el servicio en OCI/OKE.
-- `undeploy.sh`: revierte o apaga el despliegue.
+- `./setup.sh`: prepara la configuración local mínima.
+- `./build.sh`: valida prerequisitos, compila y construye la imagen.
+- `./deploy.sh`: publica el servicio en OCI/OKE.
+- `./undeploy.sh`: revierte o apaga el despliegue.
 
 Entrypoints reales:
 
-- `MtdrSpring/scripts/setup.sh`
-- `MtdrSpring/scripts/build.sh`
-- `MtdrSpring/scripts/deploy.sh`
-- `MtdrSpring/scripts/undeploy.sh`
+- `setup.sh`
+- `build.sh`
+- `deploy.sh`
+- `undeploy.sh`
 
 Estado actual del repo:
 
 - El flujo todavía está repartido entre `MtdrSpring/setup.sh`, `MtdrSpring/utils/` y `MtdrSpring/backend/`.
-- `MtdrSpring/scripts/` ahora actúa como una capa fina de entrada para no tener que recordar la ruta interna.
+- La nueva capa en la raíz hace que el punto de entrada sea simple, pero sin ocultar dónde vive la lógica real.
 - `MtdrSpring/backend/build.sh` usa `mvn clean verify` y luego empaqueta la imagen con un `Dockerfile` real y simple.
 - `MtdrSpring/backend/deploy.sh` sigue usando `state_get` y `kubectl`, así que depende de que el setup ya haya cargado estado.
 
