@@ -77,19 +77,18 @@ echo ""
 jwt_secret="$(ask_secret "JWT_SECRET" 32)"
 echo ""
 
-# PASO 3: Telegram (OBLIGATORIO)
-echo "PASO 3: Telegram Bot (OBLIGATORIO)"
-echo "──────────────────────────────────"
-echo "  • Necesario para probar el backend"
-echo "  • Crea uno en Telegram > @BotFather > /newbot"
+# PASO 3: Telegram (opcional)
+echo "PASO 3: Telegram Bot (opcional)"
+echo "───────────────────────────────"
+echo "  • El bot es opcional: puedes dejarlo deshabilitado en local"
+echo "  • Para usarlo, crea uno con @BotFather y proporciona el token"
 echo ""
-echo "  3a. Token del bot"
-telegram_bot_token="$(ask_value "TELEGRAM_BOT_TOKEN")"
+telegram_enabled="$(ask_value "TELEGRAM_ENABLED (true/false)" "false")"
+telegram_auto_init="$(ask_value "TELEGRAM_BOT_AUTO_INIT (true/false)" "false")"
+telegram_bot_token="$(ask_value "TELEGRAM_BOT_TOKEN (dejar vacío para desactivar)")"
 echo ""
-
-echo "  3b. Nombre de usuario del bot"
-echo "     (el que le diste a BotFather, ej: my_todolist_bot)"
-telegram_bot_name="$(ask_value "TELEGRAM_BOT_NAME")"
+echo "  Nombre de usuario del bot (ej: my_todolist_bot)"
+telegram_bot_name="$(ask_value "TELEGRAM_BOT_NAME (opcional)")"
 echo ""
 
 # PASO 4: Opcionales
@@ -120,10 +119,19 @@ dbpassword="$(ask_secret "SPRING_DATASOURCE_PASSWORD" 12)"
 echo ""
 
 echo "  5c. JDBC Connection String"
-echo "      Ejemplo: jdbc:oracle:thin:@reacttodok7toc_tp?TNS_ADMIN=/mtdrworkshop/creds"
-echo "      • Reemplaza 'reacttodok7toc' por tu nombre de BD"
-echo "      • TNS_ADMIN siempre es /mtdrworkshop/creds en Docker"
-db_url="$(ask_value "SPRING_DATASOURCE_URL")"
+echo "      Ejemplo: jdbc:oracle:thin:@reacttodok7toc_tp"
+echo "      • Usa un TNS alias y NO añadas ?TNS_ADMIN en la URL"
+echo "      • TNS_ADMIN por defecto es /mtdrworkshop/creds en Docker"
+db_url_raw="$(ask_value "SPRING_DATASOURCE_URL (ej: jdbc:oracle:thin:@TNS_ALIAS)")"
+
+# Strip any ?TNS_ADMIN=... from user input if present
+db_url="$db_url_raw"
+if [[ "$db_url" == *"?TNS_ADMIN="* ]]; then
+  db_url="${db_url%%\?TNS_ADMIN=*}"
+fi
+
+# TNS_ADMIN path inside container (default)
+tns_admin="$(ask_value "TNS_ADMIN (path inside container)" "/mtdrworkshop/creds")"
 echo ""
 
 # PASO 6: Wallet
@@ -159,8 +167,6 @@ if [[ -n "$wallet_source" ]]; then
     echo "     Cópialo manualmente después si lo necesitas."
     echo ""
   fi
-fi
-
 # Generar .env.local (siempre Oracle)
 cat > "$env_file" <<EOF
 # Generado por ./scripts/setup.sh
@@ -168,8 +174,13 @@ cat > "$env_file" <<EOF
 SPRING_PROFILES_ACTIVE=oracle
 JWT_SECRET=$jwt_secret
 
+# Telegram (opcional)
+TELEGRAM_ENABLED=$telegram_enabled
+TELEGRAM_BOT_AUTO_INIT=$telegram_auto_init
 TELEGRAM_BOT_TOKEN=$telegram_bot_token
 TELEGRAM_BOT_NAME=$telegram_bot_name
+
+# Deepseek (opcional)
 DEEPSEEK_API_KEY=$deepseek_api_key
 DEEPSEEK_API_URL=$deepseek_api_url
 
@@ -178,7 +189,31 @@ SPRING_DATASOURCE_URL=$db_url
 SPRING_DATASOURCE_USERNAME=$db_user
 SPRING_DATASOURCE_PASSWORD=$dbpassword
 SPRING_DATASOURCE_DRIVER_CLASS_NAME=oracle.jdbc.OracleDriver
+TNS_ADMIN=$tns_admin
+
+# UI credentials (optional)
+UI_USERNAME=$(ask_value "UI_USERNAME" "admin")
+UI_PASSWORD=$(ask_value "UI_PASSWORD" "change_me")
+
+# Backwards-compat mapping
+db_user=
+dbpassword=
+db_url=
+driver_class_name=
+
 EOF
+
+# Append backwards-compat mapping with current SPRING_* values
+cat >> "$env_file" <<EOF
+db_user=
+dbpassword=
+db_url=
+driver_class_name=
+EOF
+
+# Replace placeholders for backwards-compat mapping explicitly
+sed -i.bak -e "s|db_user=|db_user=\\${SPRING_DATASOURCE_USERNAME}|" -e "s|dbpassword=|dbpassword=\\${SPRING_DATASOURCE_PASSWORD}|" -e "s|db_url=|db_url=\\${SPRING_DATASOURCE_URL}|" -e "s|driver_class_name=|driver_class_name=\\${SPRING_DATASOURCE_DRIVER_CLASS_NAME}|" "$env_file" || true
+rm -f "$env_file.bak" || true
 
 echo "════════════════════════════════════════════════════════"
 echo "  ✓ Configuración lista"
