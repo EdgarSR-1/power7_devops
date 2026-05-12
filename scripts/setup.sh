@@ -12,7 +12,7 @@ echo "  Backend Setup: Configuración Local"
 echo "════════════════════════════════════════════════════════"
 echo ""
 echo "Este script crea .env.local con tu configuración."
-echo "Documentación: ./my-website/docs/oci/secrets-guide.mdx"
+echo "Documentación: ./docs/docs/oci/secrets-guide.mdx"
 echo ""
 
 ask_value() {

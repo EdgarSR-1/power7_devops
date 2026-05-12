@@ -19,6 +19,6 @@ If this is a fresh clone, the backend runtime files are created locally:
 
 From there you can deploy to OCI using the flow of your environment.
 
-Para detalle completo: `my-website/docs/oci/` tiene la documentación de arquitectura, configuración y troubleshooting.
+Para detalle completo: `docs/docs/oci/` tiene la documentación de arquitectura, configuración y troubleshooting.
 
 Todos los scripts viven en `./scripts/` desde la raíz. Sin excepciones.

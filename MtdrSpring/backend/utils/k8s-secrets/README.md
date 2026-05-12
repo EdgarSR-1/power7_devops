@@ -14,4 +14,4 @@ Archivos incluidos:
 - `frontend-secrets-template.yaml` — ejemplo para credenciales de UI.
 - `create-local-secrets.sh` — script que imprime/ejecuta los comandos `kubectl create secret` con placeholders (editar antes de ejecutar).
 
-Nota: Documentación de uso y links están en `my-website/docs/oci/k8s-secrets.mdx`.
+Nota: Documentación de uso y links están en `docs/docs/oci/k8s-secrets.mdx`.
