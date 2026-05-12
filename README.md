@@ -22,3 +22,8 @@ From there you can deploy to OCI using the flow of your environment.
 Para detalle completo: `docs/docs/oci/` tiene la documentación de arquitectura, configuración y troubleshooting.
 
 Todos los scripts viven en `./scripts/` desde la raíz. Sin excepciones.
+
+para eliminar tu contenedor usa `docker rm -f agilecontainer 2>/dev/null || true
+RUN_LOCAL=1 ./scripts/build.sh`
+
+
