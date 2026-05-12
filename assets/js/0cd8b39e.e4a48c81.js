@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkpower7_devops_docs=self.webpackChunkpower7_devops_docs||[]).push([["260"],{2675(e){e.exports=JSON.parse('{"metadata":{"permalink":"/power7_devops/blog","page":1,"postsPerPage":10,"totalPages":1,"totalCount":0,"blogDescription":"Blog","blogTitle":"Blog"}}')}}]);
