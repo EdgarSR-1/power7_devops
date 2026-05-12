@@ -1,0 +1,39 @@
+---
+sidebar_position: 14
+---
+
+# Organización del flujo con `scripts/`
+
+La idea es que una persona nueva vea rápido qué hace cada paso y dónde vive:
+
+- `./setup.sh`: prepara la configuración local mínima.
+- `./build.sh`: valida prerequisitos, compila y construye la imagen.
+- `./deploy.sh`: publica el servicio en OCI/OKE.
+- `./undeploy.sh`: revierte o apaga el despliegue.
+
+Entrypoints reales:
+
+- `setup.sh`
+- `build.sh`
+- `deploy.sh`
+- `undeploy.sh`
+
+Estado actual del repo:
+
+- El flujo todavía está repartido entre `MtdrSpring/setup.sh`, `MtdrSpring/utils/` y `MtdrSpring/backend/`.
+- La nueva capa en la raíz hace que el punto de entrada sea simple, pero sin ocultar dónde vive la lógica real.
+- `MtdrSpring/backend/build.sh` usa `mvn clean verify` y luego empaqueta la imagen con un `Dockerfile` real y simple.
+- `MtdrSpring/backend/deploy.sh` sigue usando `state_get` y `kubectl`, así que depende de que el setup ya haya cargado estado.
+
+Qué falta decidir antes de mover cosas:
+
+1. Si el build local se deja como compilación + empaquetado de imagen, con ejecución local opcional.
+2. Si el wallet debe seguir siendo un secreto de runtime y nunca de build.
+3. Si el flujo de OCI seguirá usando `state_get` o se documentarán variables explícitas para cada paso.
+
+Notas de orden:
+
+- No queremos meter secretos dentro de `scripts/`.
+- El wallet debe vivir en runtime, montado como secreto o volumen, no dentro de la imagen.
+- Los templates de `k8s` van aparte, como plantillas sin datos reales.
+- La documentación debe decir qué paso depende de cuál, para que nadie se salte el `setup` y luego rompa `deploy`.

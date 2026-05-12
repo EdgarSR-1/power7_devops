@@ -1,35 +1,35 @@
 # Backend Setup for Main Branch
 
-## 1) Required private files (not in Git)
+## Quick Start (New Way)
 
-1. Create local env file:
-   - `cp .env.local.example .env.local`
-2. Fill real values in `.env.local` from your team secrets.
-3. Copy Oracle wallet files to:
-   - `MtdrSpring/backend/wallet/`
-   - See expected list in `MtdrSpring/backend/wallet.example/README.md`.
+From **repo root**:
 
-## 2) Local build
+```bash
+./scripts/setup.sh  # One-time setup, interactive
+./scripts/build.sh  # Compile Maven + Docker image
+```
 
-From `MtdrSpring/backend`:
+That's it. `.env.local` is created with your answers (profile, JWT, UI creds, Oracle wallet if needed).
 
-1. Export env values:
-   - `set -a; source .env.local; set +a`
-2. Compile:
-   - `sh mvnw -DskipTests compile`
-3. Full build:
-   - `sh mvnw clean verify`
+## Legacy Way (Still works)
 
-## 3) Docker build/run
+If you need manual control:
 
-From `MtdrSpring/backend`:
+```bash
+cd MtdrSpring/backend
+set -a; source .env.local; set +a
+mvn clean verify
+./build.sh  # (Legacy script, not recommended)
+```
 
-1. Ensure `.env.local` exists.
-2. Ensure `wallet/` exists and contains real files.
-3. Run:
-   - `./build.sh`
+## Required private files (not in Git)
 
-## 4) Common failures
+1. `.env.local` in `MtdrSpring/backend/` — created by `./scripts/setup.sh`
+2. Oracle wallet (if using Oracle):
+   - Place in `MtdrSpring/backend/wallet/`
+   - See template in `MtdrSpring/backend/wallet.example/README.md`
+
+## Common failures
 
 1. ORA-01400 on `SPRINTS.GROUP_ID`:
    - Create at least one task group before creating sprints, or send `groupId` in sprint creation.

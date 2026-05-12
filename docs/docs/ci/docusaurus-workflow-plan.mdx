@@ -1,0 +1,43 @@
+---
+sidebar_position: 1
+---
+
+# Plan: Workflow CI/CD para Docusaurus → GitHub Pages
+
+Este documento describe el workflow que automatiza la construcción y despliegue
+de la documentación en `docs` hacia GitHub Pages.
+
+### Objetivo
+
+- Compilar la web estática de Docusaurus (carpeta `docs`) en cada push a `main`.
+ - Publicar los archivos resultantes en GitHub Pages usando las acciones oficiales.
+
+### Flujo resumido
+
+1. `actions/checkout` obtiene el código.
+2. `setup-node` instala Node.js v20.
+3. `npm ci` instala dependencias dentro de `docs`.
+4. `npm run build` genera `docs/build`.
+5. `actions/upload-pages-artifact` sube el build como artifact.
+6. `actions/deploy-pages` publica el artifact en GitHub Pages.
+
+### Requisitos previos
+
+- Rama de despliegue: `main` (puedes cambiarla en el workflow).
+- Permisos: el workflow usa `GITHUB_TOKEN` con permiso `pages: write`.
+- Asegúrate de que el repo tenga habilitado GitHub Pages desde `gh-pages` o desde el entorno `gh-pages` (la acción lo hará automáticamente).
+
+### Cómo editar la configuración
+
+ - Cambia `working-directory` si mueves la carpeta `docs`.
+- Si deseas desplegar a otro destino (OCIR/u otro host), reemplaza los pasos de `upload-pages-artifact`/`deploy-pages` por el push a tu registry o por un job que haga `rsync/ssh` a tu servidor.
+
+### Consideraciones adicionales
+
+ - Mantén la documentation en `docs/docs` y usa sidebars (actualmente generado automáticamente).
+- Eliminando tutoriales: este repo ha removido la carpeta `docs/tutorial-basics` para evitar contenido de plantilla.
+
+### Próximos pasos
+
+- Añadir una entrada en `README.md` del repo explicando cómo contribuir a la docs (branch, PR, formato MDX).
+- Opcional: configurar una job separada para preview deploys en cada PR (Netlify/Preview Pages).
