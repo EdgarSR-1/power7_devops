@@ -27,12 +27,19 @@ fi
 cd "$backend_dir"
 
 if [[ ! -x ./mvnw ]]; then
-  echo "No se encontró ./mvnw en $backend_dir"
-  exit 1
+  if [[ -f ./mvnw ]]; then
+    echo "[*] ./mvnw existe pero no es ejecutable; se lanzará con bash."
+    mvnw_cmd=(bash ./mvnw)
+  else
+    echo "No se encontró ./mvnw en $backend_dir"
+    exit 1
+  fi
+else
+  mvnw_cmd=(./mvnw)
 fi
 
 echo "[*] Compilando backend con Maven..."
-./mvnw -DskipTests package
+"${mvnw_cmd[@]}" -DskipTests package
 
 echo "[*] Construyendo imagen Docker..."
 image_name="agileimage:0.1"

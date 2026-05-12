@@ -4,104 +4,166 @@ sidebar_position: 9
 
 # Documentación: Cómo Usarla
 
-Este directorio documenta todo lo necesario para entender el proyecto, configurarlo y deployarlo.
+Este directorio tiene TODO lo necesario. Aquí está cómo usarlo según tu situación.
 
-## Archivos principales
+## 🚀 Estoy haciendo Setup por PRIMERA VEZ
 
-### 1. **local-setup-architecture.mdx**
-- **Qué es**: Explicación de la arquitectura y flujo de setup local
-- **Para quién**: Todos (especialmente si es tu primer día)
-- **Temas**: Dónde van los secretos, por qué el wallet no va en Docker, cómo funciona el flujo
+**Lee en este orden:**
 
-### 2. **secrets-guide.mdx** ⭐ EMPEZAR AQUÍ
-- **Qué es**: Guía paso a paso de de dónde sacar CADA secreto
-- **Para quién**: Cualquiera configurando el backend por primera vez
-- **Temas**: 
-  - Qué es perfil, JWT, credenciales DB, wallet
+1. **setup-checklist.mdx** (5 min)
+   - Qué tienes listo, qué no
+   - Paso a paso del setup
+
+2. **jwt-secret-guide.mdx** (5 min)
+   - Entiende qué es JWT_SECRET
+   - Cómo generarlo
+   - Por qué no se hardcodea
+
+3. **secrets-guide.mdx** (referencia)
+   - Detalles de cada secreto
+   - Dónde encontrar cada cosa en OCI
+
+**Luego corre:**
+```bash
+./scripts/setup.sh
+```
+
+---
+
+## 📚 Archivos de documentación
+
+### Conceptos (LEE PRIMERO)
+
+- **setup-checklist.mdx** ⭐ START HERE
+  - Checklist de lo que necesitas
+  - Paso a paso interactivo
+  - Para primer setup
+
+- **jwt-secret-guide.mdx**
+  - Qué es JWT_SECRET
+  - Cómo generarlo
+  - Relación JWT + Telegram + IA
+  - Por qué no se hardcodea
+
+- **secrets-guide.mdx**
+  - Detalles de CADA secreto
   - De dónde descargarlo en OCI
   - Formatos esperados
   - Troubleshooting
 
-### 3. **iac-guide.mdx**
-- **Qué es**: Descripción de la infraestructura como código (Terraform)
-- **Para quién**: DevOps, SRE, o si necesitas entender/cambiar OCI
-- **Temas**: VPC, Database, LoadBalancer, registro de contenedores
+### Arquitectura (PARA ENTENDER)
 
-### 4. **k8s-deployment.mdx**
-- **Qué es**: Cómo deployar en Kubernetes (OKE en OCI)
-- **Para quién**: Ops, deploy automation
-- **Temas**: Manifests, secretos en K8s, LoadBalancer, health checks
+- **local-setup-architecture.mdx**
+  - Cómo funciona el flujo
+  - Dónde van los secretos
+  - Por qué el wallet no va en Docker
 
-### 5. **scripts-flow.mdx**
-- **Qué es**: Documentación de los scripts (build, setup, deploy, undeploy)
-- **Para quién**: Developers que quieren entender los scripts
-- **Temas**: Qué hace cada script, cómo debuguear, extensiones
+- **hardcoding-risks.mdx**
+  - Análisis del Dockerfile viejo (CON hardcoding)
+  - Por qué era un riesgo
+  - Cómo lo solucionamos
 
-### 6. **hardcoding-risks.mdx**
-- **Qué es**: Análisis de qué secretos estaban hardcodeados y por qué era un riesgo
-- **Para quién**: Team leads, security reviews
-- **Temas**: El Dockerfile viejo con hardcoding, cómo lo solucionamos
+### Scripts y Deployment (PARA AVANZADOS)
 
-## Flujo típico: Primer setup
+- **scripts-flow.mdx**
+  - Qué hace cada script
+  - Cómo debuguear
+  - Extensiones
 
-Si es tu primer vez configurando el backend:
+- **k8s-deployment.mdx**
+  - Cómo deployar en Kubernetes
+  - Manifests de ejemplo
+  - K8s Secrets
 
-1. Lee: **local-setup-architecture.mdx** (5 min)
-   - Entiende dónde van las cosas
+- **iac-guide.mdx**
+  - Infraestructura (Terraform)
+  - VPC, Database, LoadBalancer
 
-2. Lee: **secrets-guide.mdx** (10 min)
-   - Entiende qué necesitas de OCI
+---
 
-3. Corre desde raíz del repo:
-   ```bash
-   ./scripts/setup.sh
-   ```
-   - Responde las preguntas siguiendo secrets-guide.mdx
+## 🎯 Por situación
 
-4. Corre:
-   ```bash
-   ./scripts/build.sh
-   ```
+### "Estoy empezando"
+```
+setup-checklist.mdx
+  ↓
+jwt-secret-guide.mdx
+  ↓
+./scripts/setup.sh
+  ↓
+./scripts/build.sh
+```
 
-Listo. Backend compilado y listo para correr.
+### "No entiendo JWT_SECRET"
+→ `jwt-secret-guide.mdx`
 
-## Flujo típico: Deploy en OCI
+### "No encuentro dónde copiar el wallet"
+→ `secrets-guide.mdx` → Sección "Oracle Wallet"
 
-Si necesitas deployar en Kubernetes en OCI:
+### "Quiero entender cómo funciona todo"
+→ `local-setup-architecture.mdx`
 
-1. Lee: **iac-guide.mdx** (si necesitas entender infraestructura)
-2. Lee: **k8s-deployment.mdx** (como deployar)
-3. Lee: **scripts-flow.mdx** (para entender deploy.sh y undeploy.sh)
+### "Necesito deployar en Kubernetes"
+→ `k8s-deployment.mdx`
 
-## Si hay errores
+### "Necesito entender por qué el código viejo era inseguro"
+→ `hardcoding-risks.mdx`
 
-- **Conexión a BD rechazada**: secrets-guide.mdx → Troubleshooting
-- **JWT error**: secrets-guide.mdx → JWT_SECRET
-- **Wallet corrupto**: secrets-guide.mdx → Oracle Wallet
-- **Docker no corre**: scripts-flow.mdx → build.sh section
-- **Deploy falla**: k8s-deployment.mdx → Troubleshooting
+### "El build falla"
+→ `scripts-flow.mdx` → Troubleshooting
 
-## Regla de oro
+---
 
-**Los secretos NO van en el código, NO van en Docker, NO se commitean.**
-
-Todo va en:
-- `.env.local` (gitignore-ado, local)
-- K8s Secrets (producción)
-- OCI Vaults (recomendado para prod)
-
-## Resumen rápido
+## 📝 Resumen rápido
 
 ```
 Tu computadora:
-  ./scripts/setup.sh    → .env.local + wallet/
-  ./scripts/build.sh    → imagen Docker
-  docker run            → contenedor local
+  1. ./scripts/setup.sh    → Crea .env.local + copia wallet
+  2. ./scripts/build.sh    → Maven compile + Docker build
+  3. docker run            → Contenedor local
 
 OCI:
-  Terraform            → infraestructura
-  K8s manifests        → deployment
-  K8s Secrets          → secretos seguros
+  • Terraform             → VPC, Database, LoadBalancer
+  • K8s manifests         → Deployment en OKE
+  • K8s Secrets           → Secretos seguros en prod
 ```
 
-¿Necesitas algo específico? Usa el índice de la izquierda o busca en esta documentación.
+---
+
+## 🔒 Regla de oro
+
+**Los secretos NO van en:**
+- ❌ Código (.java, .properties en repo)
+- ❌ Docker (ENV hardcodeado)
+- ❌ Git (commit de .env.local)
+
+**Los secretos VAN en:**
+- ✅ `.env.local` (local, gitignore-ado)
+- ✅ K8s Secrets (producción)
+- ✅ OCI Vault (producción, recomendado)
+
+---
+
+## ❓ FAQ
+
+**P: ¿Por dónde empiezo?**
+- R: `setup-checklist.mdx`
+
+**P: ¿Qué es JWT_SECRET?**
+- R: `jwt-secret-guide.mdx`
+
+**P: ¿Dónde copio el wallet?**
+- R: `secrets-guide.mdx` → "Oracle Wallet"
+
+**P: ¿Por qué no puedo hardcodear secretos?**
+- R: `hardcoding-risks.mdx` o `local-setup-architecture.mdx`
+
+**P: El backend no conecta a BD**
+- R: `secrets-guide.mdx` → "Troubleshooting"
+
+**P: ¿Cómo deployar en producción?**
+- R: `k8s-deployment.mdx`
+
+---
+
+**¡Adelante! 🚀**
