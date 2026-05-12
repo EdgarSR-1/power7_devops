@@ -1,0 +1,78 @@
+---
+sidebar_position: 12
+---
+
+# Inventario fino — valores hardcodeados y origen / responsable
+
+Objetivo: identificar en qué archivos hay valores o referencias que requieren limpieza antes de compartir o ejecutar en otra máquina. Para cada entrada indico: tipo (secreto / identificador / parámetro), origen probable y responsable sugerido.
+
+## Resumen corto
+
+- Prioridad alta (limpiar antes de compartir): cualquier ruta a wallet, credenciales, tokens, claves públicas/privadas, passwords visibles.
+- Prioridad media: valores por defecto (ej. `yourSuperSecretKey...`) que deben ser reemplazados por variables de entorno.
+- Prioridad baja: nombres de recursos y OCIDs (documentar, no secret).
+
+---
+
+## Por archivo
+
+- `MtdrSpring/backend/.env.example` / `.env.local.example`
+  - Tipo: plantilla de variables (contiene placeholders para secretos).
+  - Valores relevantes: `JWT_SECRET`, `db_user`, `dbpassword`, `db_url` (incluye TNS_ADMIN path `/mtdrworkshop/creds`), `TELEGRAM_BOT_TOKEN`, `DEEPSEEK_API_KEY`, `ui_username`/`ui_password`.
+  - Origen: secretos locales / DB owner / API owner.
+  - Responsable sugerido: quien administra la BD (wallet/db_user) y el equipo (JWT, API keys).
+
+- `MtdrSpring/backend/Dockerfile.example`
+  - Tipo: build recipe con `COPY wallet/ /mtdrworkshop/creds` (riesgo: incrusta wallet en imagen).
+  - Acción: reemplazar ejemplo por instrucción que indique montar volumen/secret al runtime.
+  - Responsable sugerido: devops / autor de Dockerfile.
+
+- `MtdrSpring/backend/build.sh` y `MtdrSpring/backend/deploy.sh`
+  - Tipo: scripts que usan env vars y `state_get` para recuperar valores (`DOCKER_REGISTRY`, `OCI_REGION`, `UI_USERNAME`, `TODO_PDB_NAME`).
+  - Origen: state files locales o env. Pueden ocultar dependencias de entorno.
+  - Acción: documentar env vars necesarias y proveer `.env.local.example` completo.
+  - Responsable sugerido: quien coordina despliegue (devops).
+
+- `MtdrSpring/backend/src/main/resources/application.properties`
+  - Tipo: referencia a variables de entorno: `jwt.secret=${JWT_SECRET:...}`, `telegram.bot.token=${TELEGRAM_BOT_TOKEN:}`.
+  - Acción: asegurar que el default no contenga un secreto real; documentar qué variable es obligatoria.
+  - Responsable sugerido: backend owner.
+
+- `MtdrSpring/backend/src/main/resources/todolistapp-springboot.yaml`
+  - Tipo: Kubernetes manifest template con: `image: %DOCKER_REGISTRY%/...`, env entries, `db_url` uses `TNS_ADMIN=/mtdrworkshop/creds`, `valueFrom.secretKeyRef` names: `dbuser`, `frontendadmin`, volume `db-wallet-secret`.
+  - Acción: documentar nombres de secrets esperados y cómo generarlos localmente (kubectl create secret ...).
+  - Responsable sugerido: devops / SRE.
+
+- `MtdrSpring/backend/wallet.example/README.md` + `wallet/` (no en repo)
+  - Tipo: lista de archivos del wallet (cwallet.sso, ewallet.p12, tnsnames.ora, sqlnet.ora).
+  - Origen: administrador de BD (DB owner externo a tu cuenta si aplica).
+  - Acción: NOTA para compartir: entregar solo por canal seguro; nunca subir al repo.
+
+- `MtdrSpring/env.sh` y `MtdrSpring/utils/state-functions.sh`
+  - Tipo: scripts de entorno que definen `MTDRWORKSHOP_STATE_HOME` y leen/escriben valores de estado (p. ej. `REGION`, `RUN_NAME`).
+  - Riesgo: valores persisten en disco y pueden contener OCIDs si se usan interactivos.
+  - Acción: documentar cómo borrar o exportar ese state; preferir variables de entorno.
+
+- `MtdrSpring/terraform/*.tf` (main-var.tf, provider.tf, database.tf, containerengine.tf, core.tf, object_storage.tf)
+  - Tipo: Infraestructura: variables obligatorias `ociTenancyOcid`, `ociUserOcid`, `ociCompartmentOcid`, `ociRegionIdentifier`, `mtdrDbName`, `mtdrKey`, and resources: Autonomous DB (ATP), OKE cluster, VCN, subnets, node pool, object storage.
+  - Hallazgos concretos: `containerengine.tf` contiene `ssh_public_key` hardcodeada (clave pública RSA visible); `database.tf` genera passwords y `output` muestra un placeholder `Welcome12345`.
+  - Acción: mover claves SSH a `terraform.tfvars` o usar Vault/OCI Vault; evitar outputs que muestren passwords.
+  - Responsable sugerido: infraestructura / quien aplica Terraform.
+
+## Clasificación por responsable (recomendado)
+
+- DB owner (posible otra cuenta): Oracle wallet, `db_user`, `dbpassword`, `TODO_PDB_NAME`.
+- Dev/backend: `JWT_SECRET`, `DEEPSEEK_API_KEY`, `DEEPSEEK_API_URL` (si se usan features), `telegram.bot.*`.
+- Devops / SRE: `DOCKER_REGISTRY`, `OCI_REGION`, Kubernetes secret names (`db-wallet-secret`, `dbuser`, `frontendadmin`), `ssh_public_key` usado en TF.
+- Infraestructura / Admin OCI: `ociTenancyOcid`, `ociCompartmentOcid`, `mtdrKey`, cluster names.
+
+## Recomendaciones rápidas (tareas pequeñas)
+
+1. Añadir en `docs/oci/secrets-and-configs.mdx` o aquí una tabla con quién entrega cada secreto (email/Slack/owner).
+2. Cambiar `Dockerfile.example` para NO copiar `wallet/` y documentar cómo montar en runtime.
+3. Remover `ssh_public_key` hardcodeado y referenciar `var.resUserPublicKey` en `terraform`.
+4. Quitar outputs de Terraform que imprimen passwords y, si necesario, escribirlos en OCI Vault o imprimir solo metadatos no sensibles.
+
+---
+
+Archivo creado automáticamente para la limpieza; paso siguiente sugerido: marcar cada archivo con un TODO inline o abrir PRs pequeños para aplicar las recomendaciones (uno por archivo).
