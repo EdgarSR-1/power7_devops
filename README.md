@@ -1,11 +1,14 @@
 # Power7 DevOps Workspace
 
-Main backend setup guide:
+Quick start:
 
-- See `MtdrSpring/backend/SETUP_MAIN.md`
+```bash
+./scripts/setup.sh  # Crea .env.local (interactivo, una sola vez)
+./scripts/build.sh  # Compila y construye imagen Docker
+```
 
-It includes:
+De ahí puedes deployar en OCI usando el flujo de tu entorno.
 
-- Required private files not committed to Git (`.env.local`, Oracle wallet)
-- Commands to compile/build
-- Common runtime errors and fixes
+Para detalle completo: `my-website/docs/oci/` tiene la documentación de arquitectura, configuración y troubleshooting.
+
+Todos los scripts viven en `./scripts/` desde la raíz. Sin excepciones.
