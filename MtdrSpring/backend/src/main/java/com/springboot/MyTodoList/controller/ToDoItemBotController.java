@@ -1,6 +1,7 @@
 package com.springboot.MyTodoList.controller;
 
 import com.springboot.MyTodoList.config.BotProps;
+import com.springboot.MyTodoList.service.AiEstimationService;
 import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.SprintService;
 import com.springboot.MyTodoList.service.TaskGroupService;
@@ -38,6 +39,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 	private TaskService taskService;
 	private TaskGroupService taskGroupService;
 	private UserService userService;
+	private AiEstimationService aiEstimationService;
 	private final TelegramClient telegramClient;
 	
 	private final BotProps botProps;
@@ -56,7 +58,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
     }
 
 
-	public ToDoItemBotController(BotProps bp, ToDoItemService tsvc, DeepSeekService ds, SprintService sprintSvc, TaskService taskSvc, TaskGroupService groupSvc, UserService userSvc) {
+	public ToDoItemBotController(BotProps bp, ToDoItemService tsvc, DeepSeekService ds, SprintService sprintSvc, TaskService taskSvc, TaskGroupService groupSvc, UserService userSvc, AiEstimationService aiSvc) {
 		this.botProps = bp;
 		telegramClient = new OkHttpTelegramClient(getBotToken());
 		toDoItemService = tsvc;
@@ -65,6 +67,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 		taskService = taskSvc;
 		taskGroupService = groupSvc;
 		userService = userSvc;
+		aiEstimationService = aiSvc;
 	}
 
 	@Override
@@ -115,7 +118,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 			return;
 		}
 
-		BotActions actions = new BotActions(telegramClient, toDoItemService, deepSeekService, sprintService, taskService, taskGroupService, userService);
+		BotActions actions = new BotActions(telegramClient, toDoItemService, deepSeekService, sprintService, taskService, taskGroupService, userService, aiEstimationService);
 		actions.setRequestText(messageTextFromTelegram);
 		actions.setChatId(chatId);
 		actions.setTelegramUserId(telegramUserId);
@@ -151,6 +154,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 		actions.fnCreateGroupPrompt();
 		actions.fnCreateGroup();
 		actions.fnAddItem();
+		actions.fnEstimate();
 		actions.fnLLM();
 		actions.fnElse();
 
@@ -162,5 +166,3 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
     }
 
 }
-
-

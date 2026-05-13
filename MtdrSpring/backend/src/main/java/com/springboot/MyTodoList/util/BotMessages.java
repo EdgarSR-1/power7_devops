@@ -42,6 +42,7 @@ public enum BotMessages {
 	TASK_COMPLETED("Task %s marked as COMPLETED! Time logged: %s hours"),
 	TASK_NOT_FOUND("Task not found. Check task ID."),
 	INVALID_HOURS("Invalid hours format. Use decimal (e.g., 2.5)"),
+	ESTIMATE_FORMAT("Ask about a task or sprint estimate.\nExamples:\n/estimate How many hours for task #12?\n/estimate How is the workload for sprint 3?"),
 	BYE("Bye! Select /start to resume!");
 
 	private String message;

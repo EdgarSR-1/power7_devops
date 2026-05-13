@@ -32,6 +32,60 @@ body {
   div#maincontent, div#newinputform form {
     width: 95%;
   }
+  .ai-estimator {
+    width: 95%;
+    margin: 1rem 0 1.2rem 0;
+    padding-top: 1rem;
+    border-top: solid 1px #5B5652;
+  }
+  .ai-estimator form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.6rem;
+    align-items: stretch;
+  }
+  .ai-estimator textarea {
+    min-height: 4.5rem;
+    resize: vertical;
+    border: solid 1px #766f68;
+    border-radius: 0.3rem;
+    padding: 0.6rem;
+    background: #FBF9F8;
+    color: #161513;
+    font-family: inherit;
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+  .ai-answer {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border-left: solid 4px #7CA86A;
+    background: #161513;
+  }
+  .ai-answer span {
+    display: block;
+    color: #A9CC98;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+  }
+  .ai-answer p,
+  .ai-error {
+    margin: 0;
+    white-space: pre-wrap;
+  }
+  .ai-error {
+    color: #FFB3A8;
+    margin-top: 0.75rem;
+  }
+  button.AskAiButton {
+    color: #FEF9F2;
+    background-color: #315F72;
+    min-width: 6rem;
+  }
+  button.AskAiButton:hover {
+    background-color: #3C7389;
+  }
   div#maincontent {
     margin: 0;
     padding: 0;
@@ -131,4 +185,12 @@ body {
   }
   button.DoneButton:hover {
     background-color: #D4CFCA;
+  }
+  @media (max-width: 560px) {
+    .ai-estimator form {
+      grid-template-columns: 1fr;
+    }
+    button.AskAiButton {
+      width: 100%;
+    }
   }

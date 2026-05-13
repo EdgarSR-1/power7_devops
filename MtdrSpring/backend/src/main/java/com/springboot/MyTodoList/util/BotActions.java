@@ -8,6 +8,7 @@ import com.springboot.MyTodoList.model.TaskGroup;
 import com.springboot.MyTodoList.model.TaskStatus;
 import com.springboot.MyTodoList.model.ToDoItem;
 import com.springboot.MyTodoList.model.User;
+import com.springboot.MyTodoList.service.AiEstimationService;
 import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.SprintService;
 import com.springboot.MyTodoList.service.TaskGroupService;
@@ -70,6 +71,7 @@ public class BotActions{
     private static final Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> pendingMoveSprintTaskByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> pendingCompleteTaskByChat = new ConcurrentHashMap<>();
+    private static final Map<Long, Boolean> pendingAiEstimateByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Map<String, String>> groupSelectionButtonsByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Map<String, String>> taskActionButtonsByChat = new ConcurrentHashMap<>();
 
@@ -86,8 +88,9 @@ public class BotActions{
     TaskService taskService;
     TaskGroupService taskGroupService;
     UserService userService;
+    AiEstimationService aiEstimationService;
 
-    public BotActions(TelegramClient tc, ToDoItemService ts, DeepSeekService ds, SprintService ss, TaskService tks, TaskGroupService tgs, UserService us){
+    public BotActions(TelegramClient tc, ToDoItemService ts, DeepSeekService ds, SprintService ss, TaskService tks, TaskGroupService tgs, UserService us, AiEstimationService ais){
         telegramClient = tc;
         todoService = ts;
         deepSeekService = ds;
@@ -95,6 +98,7 @@ public class BotActions{
         taskService = tks;
         taskGroupService = tgs;
         userService = us;
+        aiEstimationService = ais;
         exit  = false;
     }
 
@@ -217,6 +221,18 @@ public class BotActions{
 
     private void clearPendingCompleteTask() {
         pendingCompleteTaskByChat.remove(chatId);
+    }
+
+    private boolean isPendingAiEstimate() {
+        return pendingAiEstimateByChat.containsKey(chatId);
+    }
+
+    private void setPendingAiEstimate(boolean pending) {
+        if (pending) {
+            pendingAiEstimateByChat.put(chatId, Boolean.TRUE);
+            return;
+        }
+        pendingAiEstimateByChat.remove(chatId);
     }
 
     private boolean isPendingCreateSprint() {
@@ -376,7 +392,7 @@ public class BotActions{
                 .keyboardRow(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(), BotLabels.ADD_NEW_ITEM.getLabel()))
                 .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel(), BotLabels.CREATE_GROUP.getLabel()))
                 .keyboardRow(new KeyboardRow(BotLabels.LIST_SPRINT_TASKS.getLabel(), BotLabels.LIST_SPRINTS.getLabel()))
-                .keyboardRow(new KeyboardRow(BotLabels.CREATE_SPRINT.getLabel()))
+                .keyboardRow(new KeyboardRow(BotLabels.ASK_AI_ESTIMATE.getLabel(), BotLabels.CREATE_SPRINT.getLabel()))
                 .keyboardRow(new KeyboardRow(BotLabels.SHOW_MAIN_SCREEN.getLabel(), BotLabels.HIDE_MAIN_SCREEN.getLabel()))
                 .build();
     }
@@ -577,7 +593,8 @@ public class BotActions{
             welcomeMessage = "Hello, " + requesterUser.getName().trim() + "!\n" + welcomeMessage;
         }
 
-        welcomeMessage += "\n\nSprint commands:\n/sprints\n/createsprint name|yyyy-MM-dd HH:mm|yyyy-MM-dd HH:mm";
+        welcomeMessage += "\n\nSprint commands:\n/sprints\n/createsprint name|yyyy-MM-dd HH:mm|yyyy-MM-dd HH:mm"
+                + "\n\nAI estimate:\n/estimate How many hours for task #12?\n/estimate How is the workload for sprint 3?";
 
         String roleMessage = "";
         String userIdText = "N/A";
@@ -1491,21 +1508,70 @@ public class BotActions{
         exit = true;
     }
 
-    public void fnLLM(){
-        logger.info("Calling LLM");
-        if (!(requestText.contains(BotCommands.LLM_REQ.getCommand())) || exit)
+    public void fnEstimate() {
+        if (exit || requestText == null) {
             return;
-        
-        String prompt = "Dame los datos del clima en mty";
-        String out = "<empty>";
-        try{
-            out = deepSeekService.generateText(prompt);
-        }catch(Exception exc){
-
         }
 
-        BotHelper.sendMessageToTelegram(chatId, "LLM: "+out, telegramClient, null);
+        String normalizedRequest = requestText.trim();
+        String normalizedLower = normalizedRequest.toLowerCase();
+        boolean requestedFromMenu = normalizedRequest.equals(BotLabels.ASK_AI_ESTIMATE.getLabel());
+        boolean requestedFromCommand = normalizedLower.startsWith(BotCommands.ESTIMATE.getCommand());
+        boolean pendingEstimate = isPendingAiEstimate();
 
+        if (!requestedFromMenu && !requestedFromCommand && !pendingEstimate) {
+            return;
+        }
+
+        if (requestedFromMenu) {
+            setPendingAiEstimate(true);
+            sendMessageWithMainMenu(BotMessages.ESTIMATE_FORMAT.getMessage());
+            exit = true;
+            return;
+        }
+
+        String question = requestedFromCommand
+                ? normalizedRequest.substring(BotCommands.ESTIMATE.getCommand().length()).trim()
+                : normalizedRequest;
+
+        if (question.isEmpty()) {
+            setPendingAiEstimate(true);
+            sendMessageWithMainMenu(BotMessages.ESTIMATE_FORMAT.getMessage());
+            exit = true;
+            return;
+        }
+
+        sendAiEstimateAnswer(question);
+        setPendingAiEstimate(false);
+        exit = true;
+    }
+
+    public void fnLLM(){
+        logger.info("Calling LLM");
+        if (exit || requestText == null || !requestText.toLowerCase().trim().startsWith(BotCommands.LLM_REQ.getCommand()))
+            return;
+
+        String question = requestText.trim().substring(BotCommands.LLM_REQ.getCommand().length()).trim();
+        if (question.isEmpty()) {
+            sendMessageWithMainMenu(BotMessages.ESTIMATE_FORMAT.getMessage());
+            exit = true;
+            return;
+        }
+
+        sendAiEstimateAnswer(question);
+        exit = true;
+    }
+
+    private void sendAiEstimateAnswer(String question) {
+        String out;
+        try {
+            out = aiEstimationService.answerQuestion(question, requesterUser);
+        } catch (Exception exc) {
+            logger.error(exc.getLocalizedMessage(), exc);
+            out = "Could not calculate the estimate right now.";
+        }
+
+        sendMessageWithMainMenu("AI Estimate:\n" + out);
     }
 
 

@@ -27,7 +27,7 @@ public class DeepSeekService {
     }
 
     public String generateText(String prompt) throws Exception {
-        if (apiUrl == null || apiUrl.isBlank() || apiKey == null || apiKey.isBlank()) {
+        if (!isConfigured()) {
             return prompt;
         }
 
@@ -64,7 +64,19 @@ public class DeepSeekService {
         return response.body();
     }
 
+    public boolean isConfigured() {
+        return apiUrl != null && !apiUrl.isBlank() && apiKey != null && !apiKey.isBlank();
+    }
+
     private String escapeJson(String value) {
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+        if (value == null) {
+            return "";
+        }
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 }

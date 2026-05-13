@@ -14,6 +14,7 @@ public enum BotCommands {
 	SPRINT_TASKS("/sprinttasks"),
 	START_TASK("/starttask"),
 	COMPLETE_TASK("/completetask"),
+	ESTIMATE("/estimate"),
 	LLM_REQ("/llm");
 
 	private String command;

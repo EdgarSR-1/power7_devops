@@ -14,6 +14,7 @@ import React, { useState, useEffect } from 'react';
 import NewItem from './NewItem';
 import API_LIST from './API';
 import DeleteIcon from '@mui/icons-material/Delete';
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
 import { Button, TableBody, CircularProgress } from '@mui/material';
 import Moment from 'react-moment';
 
@@ -35,6 +36,10 @@ function App() {
     const [items, setItems] = useState([]);
     // In case of an error during the API call:
     const [error, setError] = useState();
+    const [aiQuestion, setAiQuestion] = useState('');
+    const [aiAnswer, setAiAnswer] = useState('');
+    const [aiError, setAiError] = useState();
+    const [isAskingAi, setAskingAi] = useState(false);
 
     function deleteItem(deleteId) {
       // console.log("deleteItem("+deleteId+")")
@@ -183,10 +188,70 @@ function App() {
         }
       );
     }
+    function askAiEstimate(event) {
+      event.preventDefault();
+      if (!aiQuestion.trim() || isAskingAi) {
+        return;
+      }
+
+      setAskingAi(true);
+      setAiError(null);
+      fetch('/api/ai/estimate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ question: aiQuestion })
+      }).then(response => {
+        if (response.ok) {
+          return response.json();
+        }
+        throw new Error('Something went wrong ...');
+      }).then(
+        (result) => {
+          setAiAnswer(result.answer || '');
+          setAskingAi(false);
+        },
+        (error) => {
+          setAiError(error);
+          setAskingAi(false);
+        }
+      );
+    }
     return (
       <div className="App">
         <h1>MY TODO LIST</h1>
         <NewItem addItem={addItem} isInserting={isInserting}/>
+        <section className="ai-estimator">
+          <h2>AI Work Estimate</h2>
+          <form onSubmit={askAiEstimate}>
+            <textarea
+              value={aiQuestion}
+              onChange={(event) => setAiQuestion(event.target.value)}
+              placeholder="Task #12 hours or sprint 3 workload"
+              rows="3"
+            />
+            <Button
+              startIcon={<AutoFixHighIcon />}
+              variant="contained"
+              className="AskAiButton"
+              disabled={isAskingAi}
+              type="submit"
+              size="small"
+            >
+              {isAskingAi ? 'Asking...' : 'Ask'}
+            </Button>
+          </form>
+          { aiError &&
+            <p className="ai-error">Error: {aiError.message}</p>
+          }
+          { aiAnswer &&
+            <div className="ai-answer">
+              <span>Estimate</span>
+              <p>{aiAnswer}</p>
+            </div>
+          }
+        </section>
         { error &&
           <p>Error: {error.message}</p>
         }
