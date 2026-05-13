@@ -39,6 +39,11 @@ frontend/coverage
 # production
 frontend/build
 
+# Next.js
+.next
+out
+frontend/.next
+
 # misc
 .DS_Store
 .env.local
@@ -61,3 +66,5 @@ frontend/yarn-error.log*
 /MtdrSpring/backend/Dockerfile
 /MtdrSpring/backend/wallet
 MtdrSpring/backend/DockerfileDev
+
+Wallet_reacttodok7toc

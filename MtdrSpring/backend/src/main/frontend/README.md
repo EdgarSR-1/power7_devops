@@ -1,0 +1,172 @@
+# Todo Manager Dashboard
+
+Full-stack task management dashboard built with Next.js, Spring Boot,
+and Oracle Autonomous Database (OCI).
+
+## Tech Stack
+
+### Frontend
+
+-   Next.js (App Router)
+-   React
+-   Tailwind CSS
+-   Lucide Icons
+
+### Backend
+
+-   Spring Boot
+-   Spring Data JPA
+-   Oracle JDBC Driver
+
+### Database
+
+-   Oracle Cloud Autonomous Database (OCI)
+
+------------------------------------------------------------------------
+
+## Architecture
+
+Next.js Frontend\
+↓\
+Spring Boot REST API\
+↓\
+Oracle Autonomous Database (OCI)
+
+------------------------------------------------------------------------
+
+## Project Structure
+
+frontend/ app/ groups/ tasks/ components/ lib/
+
+backend/ src/main/java/ controller/ repository/ entity/
+src/main/resources/ application.properties wallet/
+
+------------------------------------------------------------------------
+
+## Prerequisites
+
+-   Node.js 18+
+-   Java 17+
+-   Maven
+-   Oracle Cloud Autonomous Database
+-   OCI Wallet downloaded
+
+------------------------------------------------------------------------
+
+## Backend Setup (Spring Boot)
+
+### 1. Add dependencies (pom.xml)
+
+``` xml
+<dependency>
+    <groupId>com.oracle.database.jdbc</groupId>
+    <artifactId>ojdbc11</artifactId>
+    <version>23.3.0.23.09</version>
+</dependency>
+
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+```
+
+### 2. Add OCI Wallet
+
+Place wallet inside:
+
+backend/src/main/resources/wallet/
+
+### 3. Configure application.properties
+
+    spring.datasource.url=jdbc:oracle:thin:@YOUR_DB_high
+    spring.datasource.username=ADMIN
+    spring.datasource.password=YOUR_PASSWORD
+
+    spring.datasource.driver-class-name=oracle.jdbc.OracleDriver
+    spring.jpa.database-platform=org.hibernate.dialect.OracleDialect
+    spring.jpa.hibernate.ddl-auto=none
+
+    oracle.net.tns_admin=src/main/resources/wallet
+
+### 4. Run backend
+
+    cd backend
+    mvn spring-boot:run
+
+Server runs at:
+
+http://localhost:8080
+
+------------------------------------------------------------------------
+
+## API Endpoints
+
+GET /api/tasks
+
+Example Response:
+
+``` json
+[
+  {
+    "id": 1,
+    "title": "Create UI",
+    "status": "En Progreso",
+    "group": "Frontend",
+    "assignee": "Alice"
+  }
+]
+```
+
+------------------------------------------------------------------------
+
+## Frontend Setup (Next.js)
+
+Install dependencies:
+
+    npm install
+
+Run development server:
+
+    npm run dev
+
+App runs at:
+
+http://localhost:3000
+
+------------------------------------------------------------------------
+
+## Connecting Frontend to Backend
+
+``` ts
+useEffect(() => {
+  fetch("http://localhost:8080/api/tasks")
+    .then(res => res.json())
+    .then(setTasks);
+}, []);
+```
+
+------------------------------------------------------------------------
+
+## Features
+
+-   Sidebar dashboard layout
+-   Groups page
+-   Tasks table
+-   Filter by status
+-   Filter by group
+-   Search tasks
+-   Sort by date
+-   Oracle DB integration
+-   REST API with Spring Boot
+
+------------------------------------------------------------------------
+
+## Future Improvements
+
+-   Authentication
+-   Role-based access
+-   Pagination
+-   Create/Edit tasks
+-   Real-time updates
+-   Drag & drop kanban
+-   Dark mode
