@@ -1,29 +1,11 @@
 # Power7 DevOps Workspace
 
-Quick start:
+Main backend setup guide:
 
-```bash
-./scripts/setup.sh  # Crea .env.local (interactivo, una sola vez)
-./scripts/build.sh  # Compila y construye imagen Docker
-```
+- See `MtdrSpring/backend/SETUP_MAIN.md`
 
-If this is a fresh clone, the backend runtime files are created locally:
+It includes:
 
-1. Run `./scripts/setup.sh`
-2. Answer the prompts for `JWT_SECRET`, Telegram, Oracle DB, and wallet path
-3. Confirm that `MtdrSpring/backend/.env.local` exists
-4. Run `./scripts/build.sh`
-5. Optional local run: `RUN_LOCAL=1 ./scripts/build.sh`
-
-`JWT_SECRET` is stored in `MtdrSpring/backend/.env.local`, not in the wallet. The wallet is only for Oracle connectivity at runtime.
-
-From there you can deploy to OCI using the flow of your environment.
-
-Para detalle completo: `docs/docs/oci/` tiene la documentación de arquitectura, configuración y troubleshooting.
-
-Todos los scripts viven en `./scripts/` desde la raíz. Sin excepciones.
-
-para eliminar tu contenedor usa `docker rm -f agilecontainer 2>/dev/null || true
-RUN_LOCAL=1 ./scripts/build.sh`
-
-
+- Required private files not committed to Git (`.env.local`, Oracle wallet)
+- Commands to compile/build
+- Common runtime errors and fixes

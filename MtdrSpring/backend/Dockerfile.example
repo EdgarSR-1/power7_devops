@@ -1,6 +1,8 @@
 FROM eclipse-temurin:21-jre
 
-RUN mkdir -p /opt/app
+RUN mkdir -p /mtdrworkshop/creds /opt/app
+
+COPY wallet/ /mtdrworkshop/creds
 
 WORKDIR /opt/app
 
@@ -8,7 +10,6 @@ EXPOSE 8080
 
 COPY target/MyTodoList-0.0.1-SNAPSHOT.jar MyTodoList.jar
 
-# Example kept as a reference for the simple image packaging approach.
-# The Oracle wallet is not copied into the image.
-# Use a runtime secret volume in Kubernetes or a local bind mount when needed.
+# Runtime configuration must be provided via environment variables or an env file.
+# Example: --env-file .env.local
 ENTRYPOINT ["java", "-jar", "MyTodoList.jar"]
