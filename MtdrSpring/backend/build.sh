@@ -32,4 +32,11 @@ if [[ -f ".env.local" ]]; then
 	run_args+=(--env-file .env.local)
 fi
 
+# For local dev: mount wallet in the same path Oracle expects (/mtdrworkshop/creds)
+# In OCI/K8s, this path is a mounted secret volume, so this only applies locally
+wallet_path="$(cd .. && pwd)/wallet"
+if [[ -d "$wallet_path" ]]; then
+	run_args+=(--volume "$wallet_path:/mtdrworkshop/creds")
+fi
+
 docker run "${run_args[@]}" -d "$image_name"
