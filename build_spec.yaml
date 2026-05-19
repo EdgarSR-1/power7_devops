@@ -50,7 +50,7 @@ steps:
               cd ..;
               cd .kube;
               oci ce cluster create-kubeconfig --cluster-id ocid1.cluster.oc1.mx-queretaro-1.aaaaaaaaqvsctvqopfljkc7nuvpehrf7zqprs4ru2dt6yaf2acnpqrftfv2a --file $HOME/.kube/config --region mx-queretaro-1 --token-version 2.0.0  --kube-endpoint PUBLIC_ENDPOINT
-
+              
   - type: Command
     name: "Undeploy"
     ignoreFailure: True
