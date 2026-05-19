@@ -38,9 +38,10 @@ steps:
               pwd;
               cd P7frontend;
               ls;
-              echo 'docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080/api -t p7frontend:local .';
               echo 'docker build ...';
-              echo 'docker push ...'
+              docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080/api -t p7frontend:local .;
+              echo 'docker push ...';
+              docker push $(cat state/HOME_REGION).ocir.io/$(cat state/NAMESPACE)/p7frontend:latest
               
               
   - type: Command
