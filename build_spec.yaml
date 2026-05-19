@@ -32,7 +32,15 @@ steps:
     name: "Build"
     command:  cd MtdrSpring;
               source env.sh;
-              (cd backend;source build.sh)
+              (cd backend;source build.sh);
+              pwd;
+              cd;
+              pwd;
+              cd P7frontend;
+              ls
+              # docker build ...
+              # docker push ...
+              
               
   - type: Command
     name: "Install K8s"
