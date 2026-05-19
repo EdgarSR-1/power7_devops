@@ -38,6 +38,7 @@ steps:
               pwd;
               cd P7frontend;
               ls;
+              echo 'docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080/api -t p7frontend:local .';
               echo 'docker build ...';
               echo 'docker push ...'
               
