@@ -34,9 +34,9 @@ steps:
               source env.sh;
               (cd backend;source build.sh);
               pwd;
-              cd;
-              pwd;
-              cd P7frontend;
+              cd /workspace;
+              ls;
+              cd /workspace/P7frontend;
               ls;
               echo 'docker build ...';
               docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080/api -t p7frontend:local .;
