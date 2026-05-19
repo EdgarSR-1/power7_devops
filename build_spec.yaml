@@ -37,9 +37,9 @@ steps:
               cd;
               pwd;
               cd P7frontend;
-              ls
-              # docker build ...
-              # docker push ...
+              ls;
+              echo 'docker build ...';
+              echo 'docker push ...'
               
               
   - type: Command
