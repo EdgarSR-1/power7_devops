@@ -23,10 +23,10 @@ steps:
   - type: Command
     name: "Docker Login"
     command:  cd MtdrSpring;
-              oci os object get --bucket-name equipo52-yv0fi --name deployment_config.tgz --file deployment_config.tgz;
+              oci os object get --bucket-name "equipo52-$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/MTDR_KEY)" --name deployment_config.tgz --file deployment_config.tgz;
               tar -xzvf deployment_config.tgz;
               source env.sh;
-              cat at.cfg | docker login -u "axdispqrsjop/a00839096@tec.mx" --password-stdin qro.ocir.io
+              cat at.cfg | docker login -u "$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/a00839096@tec.mx" --password-stdin qro.ocir.io
 
   - type: Command
     name: "Build"
