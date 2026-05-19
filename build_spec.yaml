@@ -30,19 +30,18 @@ steps:
 
   - type: Command
     name: "Build"
-    command:  cd MtdrSpring;
-              source env.sh;
-              (cd backend;source build.sh);
-              pwd;
+    command:  pwd;
               cd /workspace;
               ls;
               cd /workspace/github_P7frontend;
               ls;
               echo 'docker build ...';
-              docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080/api -t p7frontend:local .;
+              docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080/api -t $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io/$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/p7frontend:latest .;
               echo 'docker push ...';
-              docker push $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io/$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/p7frontend:latest
- 
+              docker push $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io/$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/p7frontend:latest;
+              cd $OCI_PRIMARY_SOURCE_DIR/MtdrSpring;
+              source env.sh;
+              (cd backend;source build.sh)
               
               
   - type: Command
