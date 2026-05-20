@@ -24,8 +24,7 @@ steps:
     name: "Docker Login"
     command:  cd MtdrSpring;
               pwd ;
-              ls $OCI_PRIMARY_SOURCE_DIR;
-              oci os object get --bucket-name "equipo52-$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/MTDR_KEY)" --name deployment_config.tgz --file deployment_config.tgz;
+              oci os object get --bucket-name equipo52-yv0fi --name deployment_config.tgz --file deployment_config.tgz;
               tar -xzvf deployment_config.tgz;
               source env.sh;
               docker logout;
