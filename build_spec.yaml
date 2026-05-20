@@ -39,9 +39,9 @@ steps:
               cd /workspace/github_P7frontend;
               ls;
               echo 'docker build ...';
-              docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080/api -t $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io/$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/p7frontend:latest .;
+              docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080/api -t $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io/$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/equipo52/yv0fi/p7frontend:latest .;
               echo 'docker push ...';
-              docker push $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io/$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/p7frontend:latest;
+              docker push $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io/$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/equipo52/yv0fi/p7frontend:latest;
               cd $OCI_PRIMARY_SOURCE_DIR/MtdrSpring;
               source env.sh;
               (cd backend;source build.sh)
