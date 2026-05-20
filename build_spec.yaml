@@ -30,7 +30,7 @@ steps:
               source env.sh;
               docker logout;
               docker logout $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io;
-              cat at.cfg | docker login -u "$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/a00839096@tec.mx" --password-stdin qro.ocir.io
+              cat at.cfg | docker login -u "$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/a00839096@tec.mx" --password-stdin $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io
 
   - type: Command
     name: "Build"
