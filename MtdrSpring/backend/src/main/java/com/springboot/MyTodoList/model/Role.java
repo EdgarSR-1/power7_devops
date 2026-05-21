@@ -3,23 +3,24 @@ package com.springboot.MyTodoList.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "roles")
+@Table(name = "ROLES")
 public class Role {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "ID", nullable = false)
     private Long id;
 
-    @Column(name = "name", nullable = false, length = 255)
-    private String name;
+    @Enumerated(EnumType.STRING) // 🔥 importante
+    @Column(name = "NAME", nullable = false, length = 255)
+    private RoleName name;
 
-    @Column(name = "description", length = 255)
+    @Column(name = "DESCRIPTION", length = 255)
     private String description;
 
-    public Role() {
-    }
+    public Role() {}
 
-    public Role(Long id, String name, String description) {
+    public Role(Long id, RoleName name, String description) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -29,15 +30,11 @@ public class Role {
         return id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
+    public RoleName getName() {
         return name;
     }
 
-    public void setName(String name) {
+    public void setName(RoleName name) {
         this.name = name;
     }
 

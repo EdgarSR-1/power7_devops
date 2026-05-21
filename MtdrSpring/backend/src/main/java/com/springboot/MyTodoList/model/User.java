@@ -32,9 +32,9 @@ public class User {
     @Column(name = "TELEGRAM_CHAT_ID")
     private Long telegramChatId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "USER_TYPE", length = 20)
-    private UserType userType;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "ROLE", referencedColumnName = "ID", nullable = false)
+    private Role role;
 
     @Column(name = "CREATED_AT", insertable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -44,9 +44,8 @@ public class User {
 
     @PrePersist
     protected void onCreate() {
-        if (this.userType == null) {
-            this.userType = UserType.NORMAL;
-        }
+        // aquí ya no va lógica de UserType
+        // si quieres un rol por defecto, normalmente se asigna en el service al crear el usuario
     }
 
     public Long getId() {
@@ -78,7 +77,7 @@ public class User {
     }
 
     public String getPhone() {
-    return phone;
+        return phone;
     }
 
     public void setPhone(String phone) {
@@ -101,12 +100,12 @@ public class User {
         this.telegramChatId = telegramChatId;
     }
 
-    public UserType getUserType() {
-        return userType;
+    public Role getRole() {
+        return role;
     }
 
-    public void setUserType(UserType userType) {
-        this.userType = userType;
+    public void setRole(Role role) {
+        this.role = role;
     }
 
     public LocalDateTime getCreatedAt() {
