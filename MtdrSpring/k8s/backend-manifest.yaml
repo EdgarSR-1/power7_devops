@@ -155,7 +155,7 @@ spec:
           imagePullPolicy: Always
           env:
             - name: NEXT_PUBLIC_API_URL
-              value: "http://159.54.131.230/api"
+              value: "__BACKEND_API_URL__"
             - name: NODE_ENV
               value: "production"
           ports:

@@ -90,8 +90,33 @@ steps:
         -n p7-frontend \
         --dry-run=client -o yaml | kubectl apply -f -;
 
-      sed "s|mx-queretaro-1.ocir.io/axdispqrsjop/equipo52/yv0fi/p7frontend:latest|${FRONTEND_IMAGE}|g" \
+      # First apply to ensure backend Service exists/updates before resolving its LB public IP.
+      sed -e "s|mx-queretaro-1.ocir.io/axdispqrsjop/equipo52/yv0fi/p7frontend:latest|${FRONTEND_IMAGE}|g" \
+          -e "s|__BACKEND_API_URL__|/api|g" \
         k8s/backend-manifest.yaml | kubectl apply -f -;
+
+      BACKEND_LB_IP=""
+      for i in $(seq 1 36); do
+        BACKEND_LB_IP="$(kubectl get svc todolistapp-springboot-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || true)"
+        if [ -n "$BACKEND_LB_IP" ]; then
+          break
+        fi
+        echo "Waiting for backend LoadBalancer public IP... attempt ${i}/36"
+        sleep 10
+      done
+
+      if [ -z "$BACKEND_LB_IP" ]; then
+        echo "ERROR: Could not resolve public IP for service todolistapp-springboot-service"
+        kubectl get svc todolistapp-springboot-service -o wide || true
+        exit 1
+      fi
+
+      BACKEND_API_URL="http://${BACKEND_LB_IP}/api"
+      echo "Using backend API URL: ${BACKEND_API_URL}"
+
+      sed -e "s|mx-queretaro-1.ocir.io/axdispqrsjop/equipo52/yv0fi/p7frontend:latest|${FRONTEND_IMAGE}|g" \
+          -e "s|__BACKEND_API_URL__|${BACKEND_API_URL}|g" \
+          k8s/backend-manifest.yaml | kubectl apply -f -;
 
       kubectl rollout status deployment/p7frontend-deployment -n p7-frontend --timeout=5m;
       kubectl get svc p7frontend-service -n p7-frontend -o wide;
