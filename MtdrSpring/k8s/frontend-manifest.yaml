@@ -1,0 +1,192 @@
+---
+# P7 Frontend Deployment Manifest
+# Configurable via environment variables or kubectl set env/image
+# Usage: kubectl apply -f frontend-manifest.yaml
+#
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: p7-frontend
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: p7frontend-config
+  namespace: p7-frontend
+data:
+  # API configuration - use internal proxy; frontend will proxy /api to backend
+  NEXT_PUBLIC_API_URL: "/api"
+  NODE_ENV: "production"
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: p7frontend-deployment
+  namespace: p7-frontend
+  labels:
+    app: p7frontend
+    version: v1
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: p7frontend
+  template:
+    metadata:
+      labels:
+        app: p7frontend
+        version: v1
+    spec:
+      # Image pull credentials (created via: kubectl create secret docker-registry oci-registry-secret ...)
+      imagePullSecrets:
+        - name: oci-registry-secret
+      
+      containers:
+        - name: p7frontend
+          # IMPORTANT: Replace with your actual OCIR image URL
+          # Format: <REGION>.ocir.io/<NAMESPACE>/<REPO>:<TAG>
+          image: mx-queretaro-1.ocir.io/axdispqrsjop/equipo52/yv0fi/p7frontend:latest
+          imagePullPolicy: Always
+          
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          
+          # Environment variables from ConfigMap
+          envFrom:
+            - configMapRef:
+                name: p7frontend-config
+          
+          # Pod resource requests/limits
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          
+          # Readiness probe - ensure pod is ready before receiving traffic
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          # Liveness probe - restart pod if unhealthy
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          # Security context
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: false
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+      
+      # Restart policy
+      restartPolicy: Always
+      
+      # Pod distribution constraints (spread across nodes/zones if available)
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: p7frontend
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: p7frontend-service
+  namespace: p7-frontend
+  labels:
+    app: p7frontend
+  annotations:
+    # OCI LoadBalancer policy options: ROUND_ROBIN, IP_HASH, LEAST_CONNECTIONS
+    oci.oraclecloud.com/loadbalancer-policy: "ROUND_ROBIN"
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Cluster
+  
+  # Port mappings
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
+      # nodePort: <auto-assigned by k8s>  # Uncomment to specify a NodePort
+  
+  # Pod selector
+  selector:
+    app: p7frontend
+
+---
+
+# Optional: Horizontal Pod Autoscaler (requires metrics-server in cluster)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: p7frontend-hpa
+  namespace: p7-frontend
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: p7frontend-deployment
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+        - type: Pods
+          value: 2
+          periodSeconds: 30
+      selectPolicy: Max
