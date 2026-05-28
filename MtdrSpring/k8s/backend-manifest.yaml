@@ -173,8 +173,6 @@ spec:
           env:
             - name: NEXT_PUBLIC_API_URL
               value: "/api"
-            - name: BACKEND_INTERNAL_URL
-              value: "http://todolistapp-backend-router.default.svc.cluster.local"
             - name: NODE_ENV
               value: "production"
           # [P7-DBG] frontend bootstrap trace in pod logs
