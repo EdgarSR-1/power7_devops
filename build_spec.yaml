@@ -87,7 +87,7 @@ steps:
       sed -e "s|mx-queretaro-1.ocir.io/axdispqrsjop/equipo52/yv0fi/p7frontend:latest|${FRONTEND_IMAGE}|g" \
         k8s/backend-manifest.yaml | kubectl apply -f -;
 
-      BACKEND_INTERNAL_URL="http://todolistapp-backend-router.default.svc.cluster.local"
+      BACKEND_INTERNAL_URL="http://todolistapp-backend-router.mtdrworkshop.svc.cluster.local"
       BACKEND_API_URL="/api"
       echo "Using frontend API base URL: ${BACKEND_API_URL}"
       echo "[P7-DBG] backend service DNS: ${BACKEND_INTERNAL_URL}"
