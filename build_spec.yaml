@@ -105,6 +105,10 @@ steps:
 
       BACKEND_API_URL="http://${BACKEND_LB_IP}/api"
       echo "Using backend API URL: ${BACKEND_API_URL}"
+      echo "[P7-DBG] backend LB IP resolved to: ${BACKEND_LB_IP}"
+      echo "[P7-DBG] backend API URL for Next rewrite: ${BACKEND_API_URL}"
+      echo "[P7-DBG] frontend image target: ${FRONTEND_IMAGE}"
+      echo "[P7-DBG] if this URL shows localhost, the frontend will not reach OCI backend"
 
       cd /workspace/github_P7frontend;
       echo "Building frontend image with dynamic backend URL...";
