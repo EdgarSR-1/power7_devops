@@ -27,7 +27,8 @@ public class CorsConfig {
                         .collect(Collectors.toList());
 
                 registry.addMapping("/**") 
-                        .allowedOrigins(allowedOrigins.toArray(new String[0]))
+                        // Use origin patterns so the deployed frontend origin can vary without hardcoding.
+                        .allowedOriginPatterns(allowedOrigins.toArray(new String[0]))
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true); 
