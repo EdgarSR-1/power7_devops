@@ -10,12 +10,7 @@
         <collectionProp name="Arguments.arguments">
           <elementProp name="HOST" elementType="Argument">
             <stringProp name="Argument.name">HOST</stringProp>
-            <stringProp name="Argument.value">${__P(HOST,140.84.181.164)}</stringProp>
-            <stringProp name="Argument.metadata">=</stringProp>
-          </elementProp>
-          <elementProp name="ORIGIN" elementType="Argument">
-            <stringProp name="Argument.name">ORIGIN</stringProp>
-            <stringProp name="Argument.value">${__P(ORIGIN,http://140.84.181.164)}</stringProp>
+            <stringProp name="Argument.value">${__P(HOST,159.54.144.40)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="CSV" elementType="Argument">
@@ -36,8 +31,7 @@
         </elementProp>
         <intProp name="ThreadGroup.num_threads">5</intProp>
         <intProp name="ThreadGroup.ramp_time">10</intProp>
-        <longProp name="ThreadGroup.start_time">${__time()}</longProp>
-        <longProp name="ThreadGroup.end_time">0</longProp>
+        <!-- removed runtime function values to be non-GUI friendly -->
         <boolProp name="ThreadGroup.scheduler">false</boolProp>
         <stringProp name="ThreadGroup.duration"></stringProp>
         <stringProp name="ThreadGroup.delay"></stringProp>
@@ -62,10 +56,6 @@
               <stringProp name="Header.name">Content-Type</stringProp>
               <stringProp name="Header.value">application/json</stringProp>
             </elementProp>
-            <elementProp name="Origin" elementType="Header">
-              <stringProp name="Header.name">Origin</stringProp>
-              <stringProp name="Header.value">${ORIGIN}</stringProp>
-            </elementProp>
           </collectionProp>
         </HeaderManager>
         <hashTree/>
@@ -86,7 +76,7 @@
           <stringProp name="HTTPSampler.domain">${HOST}</stringProp>
           <stringProp name="HTTPSampler.port"></stringProp>
           <stringProp name="HTTPSampler.protocol">http</stringProp>
-          <stringProp name="HTTPSampler.path">/api/auth/login</stringProp>
+          <stringProp name="HTTPSampler.path">/auth/login</stringProp>
           <stringProp name="HTTPSampler.method">POST</stringProp>
           <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
           <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
@@ -124,13 +114,11 @@
               <bytes>true</bytes>
               <sentBytes>true</sentBytes>
               <url>true</url>
-              <filename>false</filename>
               <hostname>true</hostname>
               <threadCounts>true</threadCounts>
               <sampleCount>true</sampleCount>
             </value>
           </objProp>
-          <stringProp name="filename"></stringProp>
         </ResultCollector>
         <hashTree/>
       </hashTree>
