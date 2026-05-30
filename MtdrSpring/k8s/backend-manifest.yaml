@@ -181,6 +181,7 @@ spec:
                   - /bin/sh
                   - -c
                   - |
+                    sleep 3
                     echo "[P7-DBG][frontend] pod=$(hostname) namespace=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace 2>/dev/null || echo unknown)"
                     echo "[P7-DBG][frontend] NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}"
                     echo "[P7-DBG][frontend] BACKEND_INTERNAL_URL=${BACKEND_INTERNAL_URL}"
