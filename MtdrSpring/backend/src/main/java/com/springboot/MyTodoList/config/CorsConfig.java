@@ -12,8 +12,7 @@ import java.util.stream.Collectors;
 @Configuration
 public class CorsConfig {
 
-    @Value("${app.cors.allowed-origins:*}")
-    private String allowedOriginsConfig;
+    @Value("${APP_CORS_ALLOWED_ORIGINS:${app.cors.allowed-origins:*}}")private String allowedOriginsConfig;
 
     @Bean
     public WebMvcConfigurer corsConfigurer() {
