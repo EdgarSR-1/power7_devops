@@ -1,13 +1,15 @@
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: p7-frontend
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: todolistapp-springboot-service
-  annotations:
-    oci.oraclecloud.com/loadbalancer-policy: "IP_HASH"
+  namespace: p7-frontend
 spec:
-  type: LoadBalancer
-  externalTrafficPolicy: Local
-
+  type: ClusterIP
   ports:
     - port: 80
       protocol: TCP
@@ -15,12 +17,14 @@ spec:
   selector:
     app: todolistapp-springboot
 ---
-#this is new stuff for hosting on the load balancer
+# this is new stuff for hosting on the load balancer
 apiVersion: v1
 kind: Service
 metadata:
   name: todolistapp-backend-router
+  namespace: p7-frontend
 spec:
+  type: ClusterIP
   selector:
     app: todolistapp-springboot
   ports:
@@ -32,6 +36,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: todolistapp-springboot-deployment
+  namespace: p7-frontend
 spec:
   selector:
     matchLabels:
@@ -52,8 +57,9 @@ spec:
               value: "ADMIN"
             - name: db_url
               value: "jdbc:oracle:thin:@reacttodok7toc_tp?TNS_ADMIN=/mtdrworkshop/creds"
+            # Como ahora comparten dominio, puedes usar "*" o el dominio final unificado
             - name: APP_CORS_ALLOWED_ORIGINS
-              value: "__FRONTEND_ORIGIN__"
+              value: "__FRONTEND_ORIGIN__" 
             - name: todo.table.name
               value: "todoitem"
             - name: driver_class_name
@@ -112,21 +118,12 @@ spec:
               app: todolistapp-springboot
 ---
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: p7-frontend
----
-apiVersion: v1
 kind: Service
 metadata:
   name: p7frontend-service
   namespace: p7-frontend
-  annotations:
-    oci.oraclecloud.com/loadbalancer-policy: "IP_HASH"
 spec:
-  type: LoadBalancer
-  externalTrafficPolicy: Local
-
+  type: ClusterIP
   ports:
     - port: 80
       protocol: TCP
@@ -141,6 +138,7 @@ metadata:
   name: p7frontend-router
   namespace: p7-frontend
 spec:
+  type: ClusterIP
   selector:
     app: p7frontend
   ports:
@@ -183,6 +181,7 @@ spec:
                   - /bin/sh
                   - -c
                   - |
+                    sleep 5
                     echo "[P7-DBG][frontend] pod=$(hostname) namespace=$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace 2>/dev/null || echo unknown)"
                     echo "[P7-DBG][frontend] NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}"
                     echo "[P7-DBG][frontend] BACKEND_INTERNAL_URL=${BACKEND_INTERNAL_URL}"
@@ -195,3 +194,33 @@ spec:
               containerPort: 3000
               protocol: TCP
       restartPolicy: Always
+---
+# RECURSO INGRESS: Unifica el tráfico en un solo Load Balancer
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: p7-unified-ingress
+  namespace: p7-frontend
+  annotations:
+    # Asegura que NGINX (u otro controlador que uses) gestione este Ingress
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - http:
+      paths:
+      # 1. Todo lo que vaya a /api se dirige al backend (Spring Boot)
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: todolistapp-springboot-service
+            port:
+              number: 80
+      # 2. El resto del tráfico (/) se dirige al frontend (Next.js/React)
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: p7frontend-service
+            port:
+              number: 80
