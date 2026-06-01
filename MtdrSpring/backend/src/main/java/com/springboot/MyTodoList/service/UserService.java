@@ -40,9 +40,7 @@ public class UserService {
         String phone = normalizePhoneRequired(user.getPhone(), "Phone is required");
         Long telegramUserId = user.getTelegramUserId();
         Long telegramChatId = user.getTelegramChatId();
-
-        Role defaultRole = roleRepository.findByName(RoleName.USUARIO)
-                .orElseThrow(() -> new RuntimeException("Rol USUARIO no encontrado"));
+        Role defaultRole = resolveDefaultRole();
 
         if (telegramUserId != null) {
             Optional<User> existingByTelegram = repo.findByTelegramUserId(telegramUserId);
@@ -97,6 +95,15 @@ public class UserService {
         }
 
         return repo.save(user);
+    }
+
+    private Role resolveDefaultRole() {
+        return roleRepository.findByName(RoleName.USUARIO).orElseGet(() -> {
+            Role role = new Role();
+            role.setName(RoleName.USUARIO);
+            role.setDescription("Default user role");
+            return roleRepository.save(role);
+        });
     }
 
     public Optional<User> findByTelegramUserId(Long telegramUserId) {

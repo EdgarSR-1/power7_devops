@@ -29,6 +29,15 @@ if [ -z "$OCI_REGION" ]; then
     exit 1
 fi
 
+if [ -z "$FRONTEND_ORIGIN" ]; then
+    echo "FRONTEND_ORIGIN not set. Will get it with state_get"
+    export FRONTEND_ORIGIN=$(state_get FRONTEND_ORIGIN)
+fi
+if [ -z "$FRONTEND_ORIGIN" ]; then
+    echo "Error: FRONTEND_ORIGIN env variable needs to be set!"
+    exit 1
+fi
+
 if [ -z "$UI_USERNAME" ]; then
     echo "UI_USERNAME not set. Will get it with state_get"
     export UI_USERNAME=$(state_get UI_USERNAME)
@@ -50,6 +59,8 @@ mv -- /tmp/todolistapp-springboot-$CURRENTTIME.yaml todolistapp-springboot-$CURR
 sed -e "s|%TODO_PDB_NAME%|${TODO_PDB_NAME}|g" todolistapp-springboot-${CURRENTTIME}.yaml > /tmp/todolistapp-springboot-${CURRENTTIME}.yaml
 mv -- /tmp/todolistapp-springboot-$CURRENTTIME.yaml todolistapp-springboot-$CURRENTTIME.yaml
 sed -e "s|%OCI_REGION%|${OCI_REGION}|g" todolistapp-springboot-${CURRENTTIME}.yaml > /tmp/todolistapp-springboot-$CURRENTTIME.yaml
+mv -- /tmp/todolistapp-springboot-$CURRENTTIME.yaml todolistapp-springboot-$CURRENTTIME.yaml
+sed -e "s|%FRONTEND_ORIGIN%|${FRONTEND_ORIGIN}|g" todolistapp-springboot-${CURRENTTIME}.yaml > /tmp/todolistapp-springboot-$CURRENTTIME.yaml
 mv -- /tmp/todolistapp-springboot-$CURRENTTIME.yaml todolistapp-springboot-$CURRENTTIME.yaml
 sed -e "s|%UI_USERNAME%|${UI_USERNAME}|g" todolistapp-springboot-${CURRENTTIME}.yaml > /tmp/todolistapp-springboot-$CURRENTTIME.yaml
 mv -- /tmp/todolistapp-springboot-$CURRENTTIME.yaml todolistapp-springboot-$CURRENTTIME.yaml
