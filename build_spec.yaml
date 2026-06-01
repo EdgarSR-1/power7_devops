@@ -6,6 +6,7 @@ shell: bash
 env:
   variables:
     JAVA_HOME: /usr/lib64/graalvm/graalvm-java22
+    BACKEND_IMAGE: mx-queretaro-1.ocir.io/axdispqrsjop/reacttodo/v7rzn/todolistapp-springboot:latest
     NEXT_PUBLIC_API_URL: /api
     BACKEND_INTERNAL_URL: http://todolistapp-backend-router.mtdrworkshop.svc.cluster.local
 
@@ -38,14 +39,17 @@ steps:
       cat at.cfg | docker login -u "$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/a00839096@tec.mx" --password-stdin $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io
 
   - type: Command
-    name: "Build"
+    name: "Build and Push Backend"
     command: |
       pwd;
       cd /workspace;
       ls;
       cd $OCI_PRIMARY_SOURCE_DIR/MtdrSpring;
       source env.sh;
-      (cd backend;source build.sh)
+      echo "Building backend image: ${BACKEND_IMAGE}";
+      (cd backend; mvn -DskipTests package);
+      docker build -t "${BACKEND_IMAGE}" backend;
+      docker push "${BACKEND_IMAGE}";
               
               
   - type: Command
@@ -86,7 +90,8 @@ steps:
         --dry-run=client -o yaml | kubectl apply -f -;
 
       # Apply backend first so its in-cluster Service exists before the frontend builds.
-      sed -e "s|mx-queretaro-1.ocir.io/axdispqrsjop/equipo52/yv0fi/p7frontend:latest|${FRONTEND_IMAGE}|g" \
+      sed -e "s|mx-queretaro-1.ocir.io/axdispqrsjop/reacttodo/v7rzn/todolistapp-springboot:0.1|${BACKEND_IMAGE}|g" \
+        -e "s|mx-queretaro-1.ocir.io/axdispqrsjop/equipo52/yv0fi/p7frontend:latest|${FRONTEND_IMAGE}|g" \
         k8s/backend-manifest.yaml | kubectl apply -f -;
 
       echo "Using frontend API base URL: ${NEXT_PUBLIC_API_URL}"
@@ -103,8 +108,12 @@ steps:
       docker push "${FRONTEND_IMAGE}";
 
       cd $OCI_PRIMARY_SOURCE_DIR/MtdrSpring;
-      sed -e "s|mx-queretaro-1.ocir.io/axdispqrsjop/equipo52/yv0fi/p7frontend:latest|${FRONTEND_IMAGE}|g" \
+      sed -e "s|mx-queretaro-1.ocir.io/axdispqrsjop/reacttodo/v7rzn/todolistapp-springboot:0.1|${BACKEND_IMAGE}|g" \
+        -e "s|mx-queretaro-1.ocir.io/axdispqrsjop/equipo52/yv0fi/p7frontend:latest|${FRONTEND_IMAGE}|g" \
         k8s/backend-manifest.yaml | kubectl apply -f -;
+
+      kubectl rollout restart deployment/todolistapp-springboot-deployment -n mtdrworkshop;
+      kubectl rollout status deployment/todolistapp-springboot-deployment -n mtdrworkshop --timeout=5m;
 
       kubectl rollout status deployment/p7frontend-deployment -n p7-frontend --timeout=5m;
       kubectl get svc p7frontend-service -n p7-frontend -o wide;
