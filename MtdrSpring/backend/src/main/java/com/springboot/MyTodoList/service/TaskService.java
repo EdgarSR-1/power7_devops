@@ -20,6 +20,8 @@ import com.springboot.MyTodoList.repository.TodoListRepository;
 import com.springboot.MyTodoList.repository.UserRepository;
 import com.springboot.MyTodoList.repository.TaskAssignmentRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -27,8 +29,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+
 @Service
 public class TaskService {
+
+    private static final int AI_TASK_LIMIT = 30;
 
     private final TaskRepository taskRepository;
     private final TodoListRepository todoListRepository;
@@ -117,6 +122,47 @@ public class TaskService {
         }
 
         return resolveSprintForWindow(dto.getStartDate(), dto.getEndDate(), dto.getDueDate());
+    }
+
+    private User getUserByEmailForAi(String userEmail) {
+    if (userEmail == null || userEmail.trim().isEmpty()) {
+        throw new RuntimeException("Unauthorized");
+    }
+
+    return userRepository.findByEmail(userEmail)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+}
+
+private TaskStatus parseTaskStatusForAi(String status) {
+    if (status == null || status.trim().isEmpty()) {
+        throw new RuntimeException("Task status is required");
+    }
+
+    String normalizedStatus = status.trim().toLowerCase();
+
+    if ("pending".equals(normalizedStatus)
+            || "pendiente".equals(normalizedStatus)
+            || "pendientes".equals(normalizedStatus)) {
+        return TaskStatus.pending;
+    }
+
+    if ("in_progress".equals(normalizedStatus)
+            || "in progress".equals(normalizedStatus)
+            || "progreso".equals(normalizedStatus)
+            || "en progreso".equals(normalizedStatus)) {
+        return TaskStatus.in_progress;
+    }
+
+    if ("completed".equals(normalizedStatus)
+            || "complete".equals(normalizedStatus)
+            || "completada".equals(normalizedStatus)
+            || "completadas".equals(normalizedStatus)
+            || "terminada".equals(normalizedStatus)
+            || "terminadas".equals(normalizedStatus)) {
+        return TaskStatus.completed;
+    }
+
+    throw new RuntimeException("Invalid task status: " + status);
     }
 
     private Sprint resolveSprintForWindow(LocalDateTime startDate, LocalDateTime endDate, LocalDateTime dueDate) {
@@ -432,6 +478,88 @@ public class TaskService {
     }
 
     throw new RuntimeException("Unauthorized");
+    }
+
+    public List<Task> getOverdueTasksForUser(String userEmail) {
+    User user = getUserByEmailForAi(userEmail);
+    Pageable limit = PageRequest.of(0, AI_TASK_LIMIT);
+    LocalDateTime now = LocalDateTime.now();
+
+    if (isSuperAdmin(user)) {
+        return taskRepository.findOverdueTasksForSuperAdmin(
+                now,
+                TaskStatus.completed,
+                limit
+        );
+    }
+
+    return taskRepository.findOverdueTasksVisibleToUser(
+            user.getId(),
+            now,
+            TaskStatus.completed,
+            limit
+    );
+}
+
+public List<Task> getTasksForUserByStatus(String userEmail, String status) {
+    User user = getUserByEmailForAi(userEmail);
+    TaskStatus parsedStatus = parseTaskStatusForAi(status);
+    Pageable limit = PageRequest.of(0, AI_TASK_LIMIT);
+
+    if (isSuperAdmin(user)) {
+        return taskRepository.findTasksByStatusForSuperAdmin(
+                parsedStatus,
+                limit
+        );
+    }
+
+    return taskRepository.findTasksByStatusVisibleToUser(
+            user.getId(),
+            parsedStatus,
+            limit
+    );
+}
+
+public List<Task> getHighPriorityTasksForUser(String userEmail) {
+    User user = getUserByEmailForAi(userEmail);
+    Pageable limit = PageRequest.of(0, AI_TASK_LIMIT);
+
+    if (isSuperAdmin(user)) {
+        return taskRepository.findTasksByPriorityForSuperAdmin(
+                TaskPriority.high,
+                TaskStatus.completed,
+                limit
+        );
+    }
+
+    return taskRepository.findTasksByPriorityVisibleToUser(
+            user.getId(),
+            TaskPriority.high,
+            TaskStatus.completed,
+            limit
+    );
+}
+
+public List<Task> getTasksBySprintForUser(String userEmail, Long sprintId) {
+    if (sprintId == null) {
+        throw new RuntimeException("Sprint id is required");
+    }
+
+    User user = getUserByEmailForAi(userEmail);
+    Pageable limit = PageRequest.of(0, AI_TASK_LIMIT);
+
+    if (isSuperAdmin(user)) {
+        return taskRepository.findTasksBySprintForSuperAdmin(
+                sprintId,
+                limit
+        );
+    }
+
+    return taskRepository.findTasksBySprintVisibleToUser(
+            user.getId(),
+            sprintId,
+            limit
+    );
 }
 
     private TaskResponseDTO mapToResponseDTO(Task task) {
