@@ -61,6 +61,7 @@ public class SecurityConfig {
                     "/error",
                     "/auth/login",
                     "/auth/register",
+                    "/ai/**",
                     "/todolist/**"
                 ).permitAll()
                 .anyRequest().authenticated()

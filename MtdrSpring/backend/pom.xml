@@ -14,13 +14,37 @@
 	<name>MyTodoList</name>
 	<description>Demo project for Spring Boot</description>
 	<properties>
-		<java.version>11</java.version>
+		<java.version>17</java.version>
 		<version.lib.ojdbc>21.1.0.0</version.lib.ojdbc>
 		<frontend-src-dir>${project.basedir}/src/main/frontend</frontend-src-dir>
 		<node.version>v23.9.0</node.version>
 		<npm.version>8.1.2</npm.version>
 	</properties>
+	<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-bom</artifactId>
+            <version>1.1.7</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
 	<dependencies>
+	<dependency>
+   	 <groupId>org.springframework.ai</groupId>
+    	<artifactId>spring-ai-starter-model-google-genai</artifactId>
+	</dependency>
+	    <dependency>
+     	 <groupId>com.google.guava</groupId>
+    	 <artifactId>guava</artifactId>
+		 <version>33.0.0-jre</version>
+		</dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webflux</artifactId>
+    </dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
