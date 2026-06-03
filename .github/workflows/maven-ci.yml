@@ -1,0 +1,29 @@
+name: Backend Maven CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+
+jobs:
+  backend-maven:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: MtdrSpring/backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Run Maven clean test
+        run: ./mvnw -B clean test
