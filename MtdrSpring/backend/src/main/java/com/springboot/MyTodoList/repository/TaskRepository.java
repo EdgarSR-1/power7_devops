@@ -111,21 +111,24 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             Pageable pageable
     );
 
-    @Query("SELECT DISTINCT t FROM Task t, GroupMember gm " +
-            "WHERE t.todoList IS NOT NULL " +
-            "AND t.todoList.group IS NOT NULL " +
-            "AND gm.group.id = t.todoList.group.id " +
-            "AND gm.user.id = :userId " +
-            "AND t.dueDate IS NOT NULL " +
-            "AND t.dueDate < :now " +
-            "AND t.status <> :completedStatus " +
-            "ORDER BY t.dueDate ASC")
-    List<Task> findOverdueTasksVisibleToUser(
-            @Param("userId") Long userId,
-            @Param("now") LocalDateTime now,
-            @Param("completedStatus") TaskStatus completedStatus,
-            Pageable pageable
-    );
+   @Query("SELECT t FROM Task t " +
+        "WHERE t.todoList IS NOT NULL " +
+        "AND t.todoList.group IS NOT NULL " +
+        "AND t.dueDate IS NOT NULL " +
+        "AND t.dueDate < :now " +
+        "AND t.status <> :completedStatus " +
+        "AND EXISTS (" +
+        "   SELECT gm.id FROM GroupMember gm " +
+        "   WHERE gm.group.id = t.todoList.group.id " +
+        "   AND gm.user.id = :userId" +
+        ") " +
+        "ORDER BY t.dueDate ASC")
+        List<Task> findOverdueTasksVisibleToUser(
+        @Param("userId") Long userId,
+        @Param("now") LocalDateTime now,
+        @Param("completedStatus") TaskStatus completedStatus,
+        Pageable pageable
+        );
 
     @Query("SELECT t FROM Task t " +
             "WHERE t.status = :status " +
@@ -135,18 +138,21 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             Pageable pageable
     );
 
-    @Query("SELECT DISTINCT t FROM Task t, GroupMember gm " +
-            "WHERE t.todoList IS NOT NULL " +
-            "AND t.todoList.group IS NOT NULL " +
-            "AND gm.group.id = t.todoList.group.id " +
-            "AND gm.user.id = :userId " +
-            "AND t.status = :status " +
-            "ORDER BY t.createdAt DESC")
-    List<Task> findTasksByStatusVisibleToUser(
-            @Param("userId") Long userId,
-            @Param("status") TaskStatus status,
-            Pageable pageable
-    );
+    @Query("SELECT t FROM Task t " +
+        "WHERE t.todoList IS NOT NULL " +
+        "AND t.todoList.group IS NOT NULL " +
+        "AND t.status = :status " +
+        "AND EXISTS (" +
+        "   SELECT gm.id FROM GroupMember gm " +
+        "   WHERE gm.group.id = t.todoList.group.id " +
+        "   AND gm.user.id = :userId" +
+        ") " +
+        "ORDER BY t.createdAt DESC")
+        List<Task> findTasksByStatusVisibleToUser(
+        @Param("userId") Long userId,
+        @Param("status") TaskStatus status,
+        Pageable pageable
+        );
 
     @Query("SELECT t FROM Task t " +
         "WHERE t.priority = :priority " +
@@ -158,20 +164,23 @@ List<Task> findTasksByPriorityForSuperAdmin(
         Pageable pageable
 );
 
-    @Query("SELECT DISTINCT t FROM Task t, GroupMember gm " +
+    @Query("SELECT t FROM Task t " +
         "WHERE t.todoList IS NOT NULL " +
         "AND t.todoList.group IS NOT NULL " +
-        "AND gm.group.id = t.todoList.group.id " +
-        "AND gm.user.id = :userId " +
         "AND t.priority = :priority " +
         "AND t.status <> :completedStatus " +
+        "AND EXISTS (" +
+        "   SELECT gm.id FROM GroupMember gm " +
+        "   WHERE gm.group.id = t.todoList.group.id " +
+        "   AND gm.user.id = :userId" +
+        ") " +
         "ORDER BY t.dueDate ASC")
-List<Task> findTasksByPriorityVisibleToUser(
+        List<Task> findTasksByPriorityVisibleToUser(
         @Param("userId") Long userId,
         @Param("priority") TaskPriority priority,
         @Param("completedStatus") TaskStatus completedStatus,
         Pageable pageable
-);
+        );       
 
     @Query("SELECT t FROM Task t " +
             "WHERE t.sprint.id = :sprintId " +
@@ -181,17 +190,20 @@ List<Task> findTasksByPriorityVisibleToUser(
             Pageable pageable
     );
 
-    @Query("SELECT DISTINCT t FROM Task t, GroupMember gm " +
-            "WHERE t.todoList IS NOT NULL " +
-            "AND t.todoList.group IS NOT NULL " +
-            "AND gm.group.id = t.todoList.group.id " +
-            "AND gm.user.id = :userId " +
-            "AND t.sprint.id = :sprintId " +
-            "ORDER BY t.createdAt DESC")
-    List<Task> findTasksBySprintVisibleToUser(
-            @Param("userId") Long userId,
-            @Param("sprintId") Long sprintId,
-            Pageable pageable
+    @Query("SELECT t FROM Task t " +
+        "WHERE t.todoList IS NOT NULL " +
+        "AND t.todoList.group IS NOT NULL " +
+        "AND t.sprint.id = :sprintId " +
+        "AND EXISTS (" +
+        "   SELECT gm.id FROM GroupMember gm " +
+        "   WHERE gm.group.id = t.todoList.group.id " +
+        "   AND gm.user.id = :userId" +
+        ") " +
+        "ORDER BY t.createdAt DESC")
+List<Task> findTasksBySprintVisibleToUser(
+        @Param("userId") Long userId,
+        @Param("sprintId") Long sprintId,
+        Pageable pageable
 );
 
 }
