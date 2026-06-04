@@ -25,6 +25,9 @@ jobs:
           java-version: "17"
           cache: maven
 
+      - name: Set permissions
+        run: chmod +x mvnw
+
       - name: Run Checkstyle
         run: >
           ./mvnw -B -DskipTests
