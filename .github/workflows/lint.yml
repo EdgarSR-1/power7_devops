@@ -29,4 +29,4 @@ jobs:
         run: >
           ./mvnw -B -DskipTests
           checkstyle:check
-          -Dcheckstyle.config.location=${{ github.workspace }}/java_checks.xml
+          -Dcheckstyle.config.location=${{ github.workspace }}/java_checks.xmlz
