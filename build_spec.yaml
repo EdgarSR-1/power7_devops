@@ -6,6 +6,9 @@ shell: bash
 env:
   variables:
     JAVA_HOME: /usr/lib64/graalvm/graalvm-java22
+    BACKEND_IMAGE: mx-queretaro-1.ocir.io/axdispqrsjop/reacttodo/v7rzn/todolistapp-springboot:latest
+    NEXT_PUBLIC_API_URL: /api
+    BACKEND_INTERNAL_URL: http://todolistapp-backend-router.mtdrworkshop.svc.cluster.local
 
   exportedVariables:
     - BuildServiceDemoVersion
@@ -13,66 +16,117 @@ env:
 steps:
   - type: Command
     name: "Install GraalVM Enterprise 22.x Native Image for Java22"
-    command:  yum -y install graalvm-22-jdk.x86_64;
-              ls /usr/lib64/graalvm/
+    command: |
+      yum -y install graalvm-22-jdk.x86_64;
+      ls /usr/lib64/graalvm/
 
   - type: Command
     name: "Set PATH Variable"
-    command: export PATH=$JAVA_HOME/bin:$PATH
+    command: |
+      export PATH=$JAVA_HOME/bin:$PATH
 
   - type: Command
     name: "Docker Login"
-    command:  cd MtdrSpring;
-              pwd ;
-              ls;
-              oci os object get --bucket-name equipo52-yv0fi --name deployment_config.tgz --file deployment_config.tgz;
-              tar -xzvf deployment_config.tgz;
-              source env.sh;
-              docker logout;
-              docker logout $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io;
-              cat at.cfg | docker login -u "$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/a00839096@tec.mx" --password-stdin $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io
+    command: |
+      cd MtdrSpring;
+      pwd ;
+      ls;
+      oci os object get --bucket-name equipo52-yv0fi --name deployment_config.tgz --file deployment_config.tgz;
+      tar -xzvf deployment_config.tgz;
+      source env.sh;
+      docker logout;
+      docker logout $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io;
+      cat at.cfg | docker login -u "$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/a00839096@tec.mx" --password-stdin $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io
 
   - type: Command
-    name: "Build"
-    command:  pwd;
-              cd /workspace;
-              ls;
-              cd /workspace/github_P7frontend;
-              ls;
-              echo 'docker build ...';
-              docker build --build-arg NEXT_PUBLIC_API_URL=http://localhost:8080/api -t $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io/$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/equipo52/yv0fi/p7frontend:latest .;
-              echo 'docker push ...';
-              docker push $(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io/$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/equipo52/yv0fi/p7frontend:latest;
-              cd $OCI_PRIMARY_SOURCE_DIR/MtdrSpring;
-              source env.sh;
-              (cd backend;source build.sh)
+    name: "Build and Push Backend"
+    command: |
+      pwd;
+      cd /workspace;
+      ls;
+      cd $OCI_PRIMARY_SOURCE_DIR/MtdrSpring;
+      source env.sh;
+      echo "Building backend image: ${BACKEND_IMAGE}";
+      (cd backend; mvn -DskipTests package);
+      docker build -t "${BACKEND_IMAGE}" backend;
+      docker push "${BACKEND_IMAGE}";
               
               
   - type: Command
     name: "Install K8s"
-    command: mkdir -p $HOME/.kube;
-              cd $HOME;
-              ls -la;
-              mkdir k8s;
-              ls -la;
-              cd k8s;
-              wget https://dl.k8s.io/v1.34.2/bin/linux/amd64/kubectl;
-              ls -la;
-              chmod +x kubectl;
-              export PATH=$PATH:$HOME/k8s;
-              kubectl version --client;
-              cd ..;
-              cd .kube;
-              oci ce cluster create-kubeconfig --cluster-id ocid1.cluster.oc1.mx-queretaro-1.aaaaaaaaqvsctvqopfljkc7nuvpehrf7zqprs4ru2dt6yaf2acnpqrftfv2a --file $HOME/.kube/config --region mx-queretaro-1 --token-version 2.0.0  --kube-endpoint PUBLIC_ENDPOINT
+    command: |
+      mkdir -p $HOME/.kube;
+      cd $HOME;
+      ls -la;
+      mkdir k8s;
+      ls -la;
+      cd k8s;
+      wget https://dl.k8s.io/v1.34.2/bin/linux/amd64/kubectl;
+      ls -la;
+      chmod +x kubectl;
+      export PATH=$PATH:$HOME/k8s;
+      kubectl version --client;
+      cd ..;
+      cd .kube;
+      oci ce cluster create-kubeconfig --cluster-id ocid1.cluster.oc1.mx-queretaro-1.aaaaaaaaqvsctvqopfljkc7nuvpehrf7zqprs4ru2dt6yaf2acnpqrftfv2a --file $HOME/.kube/config --region mx-queretaro-1 --token-version 2.0.0  --kube-endpoint PUBLIC_ENDPOINT
+
+  - type: Command
+    name: "Deploy Frontend"
+    command: |
+      export PATH=$PATH:$HOME/k8s;
+      export KUBECONFIG=$HOME/.kube/config;
+      cd $OCI_PRIMARY_SOURCE_DIR/MtdrSpring;
+      source env.sh;
+
+      FRONTEND_IMAGE="$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io/$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/equipo52/yv0fi/p7frontend:latest"
+
+      kubectl create namespace p7-frontend --dry-run=client -o yaml | kubectl apply -f -;
+      kubectl create secret docker-registry oci-registry-secret \
+        --docker-server="$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/HOME_REGION).ocir.io" \
+        --docker-username="$(cat $OCI_PRIMARY_SOURCE_DIR/MtdrSpring/state/NAMESPACE)/a00839096@tec.mx" \
+        --docker-password="$(cat at.cfg)" \
+        --docker-email="ci@example.com" \
+        -n p7-frontend \
+        --dry-run=client -o yaml | kubectl apply -f -;
+
+      # Apply backend first so its in-cluster Service exists before the frontend builds.
+      sed -e "s|mx-queretaro-1.ocir.io/axdispqrsjop/reacttodo/v7rzn/todolistapp-springboot:0.1|${BACKEND_IMAGE}|g" \
+        -e "s|mx-queretaro-1.ocir.io/axdispqrsjop/equipo52/yv0fi/p7frontend:latest|${FRONTEND_IMAGE}|g" \
+        k8s/backend-manifest.yaml | kubectl apply -f -;
+
+      echo "Using frontend API base URL: ${NEXT_PUBLIC_API_URL}"
+      echo "[P7-DBG] backend service DNS: ${BACKEND_INTERNAL_URL}"
+      echo "[P7-DBG] frontend API base URL: ${NEXT_PUBLIC_API_URL}"
+      echo "[P7-DBG] frontend image target: ${FRONTEND_IMAGE}"
+      echo "[P7-DBG] if this URL shows localhost, the frontend will not reach OCI backend"
+
+      cd /workspace/github_P7frontend;
+      echo "Building frontend image with stable in-cluster backend URL...";
+      docker build --build-arg NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
+        --build-arg BACKEND_INTERNAL_URL="${BACKEND_INTERNAL_URL}" \
+        -t "${FRONTEND_IMAGE}" .;
+      docker push "${FRONTEND_IMAGE}";
+
+      cd $OCI_PRIMARY_SOURCE_DIR/MtdrSpring;
+      sed -e "s|mx-queretaro-1.ocir.io/axdispqrsjop/reacttodo/v7rzn/todolistapp-springboot:0.1|${BACKEND_IMAGE}|g" \
+        -e "s|mx-queretaro-1.ocir.io/axdispqrsjop/equipo52/yv0fi/p7frontend:latest|${FRONTEND_IMAGE}|g" \
+        k8s/backend-manifest.yaml | kubectl apply -f -;
+
+      kubectl rollout restart deployment/todolistapp-springboot-deployment -n mtdrworkshop;
+      kubectl rollout status deployment/todolistapp-springboot-deployment -n mtdrworkshop --timeout=5m;
+
+      kubectl rollout status deployment/p7frontend-deployment -n p7-frontend --timeout=5m;
+      kubectl get svc p7frontend-service -n p7-frontend -o wide;
               
   - type: Command
     name: "Undeploy"
     ignoreFailure: True
-    command: export PATH=$PATH:$HOME/k8s;kubectl version;
-              export KUBECONFIG=$HOME/.kube/config;
-              cd MtdrSpring;
-              source env.sh;
-              cd backend;
-              ls -l;
-              kubectl config view;
-              source undeploy.sh;
+    command: |
+      export PATH=$PATH:$HOME/k8s;kubectl version;
+      export KUBECONFIG=$HOME/.kube/config;
+      cd MtdrSpring;
+      source env.sh;
+      cd backend;
+      ls -l;
+      kubectl config view;
+      source undeploy.sh;

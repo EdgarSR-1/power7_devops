@@ -1,0 +1,43 @@
+name: Backend Lint
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  checkstyle:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: MtdrSpring/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - run: chmod +x mvnw
+
+      - name: Run Checkstyle
+        run: >
+          ./mvnw -B checkstyle:check
+          -Dcheckstyle.config.location=${{ github.workspace }}/java_checks.xml
+
+      - name: Generate Checkstyle Report
+        if: always()
+        run: >
+          ./mvnw checkstyle:checkstyle
+          -Dcheckstyle.config.location=${{ github.workspace }}/java_checks.xml
+
+      - name: Upload Checkstyle Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkstyle-report
+          path: MtdrSpring/backend/target/site

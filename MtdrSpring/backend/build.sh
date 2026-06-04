@@ -5,8 +5,8 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$script_dir"
 
-container_name="agilecontainer"
-image_name="agileimage:0.1"
+container_name="backend-power7"
+image_name="backend-power7:0.1"
 docker_platform="${DOCKER_PLATFORM:-}"
 docker_memory="${DOCKER_MEMORY:-1g}"
 docker_cpus="${DOCKER_CPUS:-2}"
