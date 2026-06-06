@@ -118,15 +118,15 @@ steps:
       kubectl rollout status deployment/p7frontend-deployment -n p7-frontend --timeout=5m;
       kubectl get svc p7frontend-service -n p7-frontend -o wide;
               
-  - type: Command
-    name: "Undeploy"
-    ignoreFailure: True
-    command: |
-      export PATH=$PATH:$HOME/k8s;kubectl version;
-      export KUBECONFIG=$HOME/.kube/config;
-      cd MtdrSpring;
-      source env.sh;
-      cd backend;
-      ls -l;
-      kubectl config view;
-      source undeploy.sh;
+  # - type: Command
+  #   name: "Undeploy"
+  #   ignoreFailure: True
+  #   command: |
+  #     export PATH=$PATH:$HOME/k8s;kubectl version;
+  #     export KUBECONFIG=$HOME/.kube/config;
+  #     cd MtdrSpring;
+  #     source env.sh;
+  #     cd backend;
+  #     ls -l;
+  #     kubectl config view;
+  #     source undeploy.sh;
