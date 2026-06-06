@@ -138,6 +138,7 @@ metadata:
   namespace: p7-frontend
   annotations:
     oci.oraclecloud.com/loadbalancer-policy: "IP_HASH"
+    oci.oraclecloud.com/reserved-ips: "140.84.186.38"
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
