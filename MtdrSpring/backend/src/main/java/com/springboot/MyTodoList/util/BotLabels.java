@@ -8,7 +8,6 @@ public enum BotLabels {
 	LIST_GROUP_TASKS("List Group"),
 	LIST_SPRINT_TASKS("Sprint Tasks"),
 	LIST_SPRINTS("List Sprints"),
-	CREATE_SPRINT("Create Sprint"),
 	CREATE_GROUP("Create Group"),
 	ADD_NEW_ITEM("Add New Item"),
 	DONE("DONE"),

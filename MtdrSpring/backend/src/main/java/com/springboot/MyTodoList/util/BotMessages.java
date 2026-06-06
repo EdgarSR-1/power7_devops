@@ -25,10 +25,8 @@ public enum BotMessages {
 	ADD_TASK_FORMAT("Format: /addtask task_title estimated_hours\nExample: /addtask Implement login 3\nMax per task is 4h. If you send more, the bot will split it automatically."),
 	TASK_ADDED_WITH_HOURS("Task created with estimated hours: %s! Developer: %s"),
 	TASK_SPLIT_CREATED("Task estimate was %s hours. Created %s subtasks (max 4h each). Developer: %s"),
-	SPRINTS_FORMAT("Format: /sprints to list all sprints\nUse /createsprint Sprint 5;2026-04-15 09:00;2026-04-29 18:00 to create one"),
-	NO_SPRINTS_FOUND("No sprints found. Create one with /createsprint Sprint 5;2026-04-15 09:00;2026-04-29 18:00"),
-	SPRINT_CREATED("Sprint created successfully: %s (#%s)"),
-	CREATE_SPRINT_FORMAT("Format: /createsprint <name>;<start>;<end>[;<groupId>]\nExample: /createsprint Sprint 5;2026-04-15 09:00;2026-04-29 18:00;1\nSupported date formats: yyyy-MM-dd HH:mm, yyyy-MM-dd'T'HH:mm, dd/MM/yyyy HH:mm, yyyy-MM-dd\nTip: you can also use | instead of ;\nIf groupId is omitted, the bot uses the first existing group."),
+	SPRINTS_FORMAT("Format: /sprints to list all sprints"),
+	NO_SPRINTS_FOUND("No sprints found."),
 	MOVE_SPRINT_FORMAT("Format: /movesprint [task_id] [sprint_id]\nExample: /movesprint 42 3"),
 	MOVE_SPRINT_PROMPT("Type the destination sprint ID and press send."),
 	TASK_SPRINT_CHANGED("Task %s moved to sprint %s."),
@@ -41,7 +39,8 @@ public enum BotMessages {
 	COMPLETE_TASK_FORMAT("Format: /completetask [task_id] [actual_hours]\nExample: /completetask 42 2.5"),
 	TASK_COMPLETED("Task %s marked as COMPLETED! Time logged: %s hours"),
 	TASK_NOT_FOUND("Task not found. Check task ID."),
-	INVALID_HOURS("Invalid hours format. Use decimal (e.g., 2.5)"),
+	INVALID_HOURS("Invalid hours format. Use a positive number (e.g., 3, 2.5, or 2,5)."),
+	ESTIMATED_HOURS_TOO_LARGE("Estimated hours are too large. The maximum allowed is 400 hours."),
 	BYE("Bye! Select /start to resume!");
 
 	private String message;

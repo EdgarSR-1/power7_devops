@@ -1,7 +1,6 @@
 package com.springboot.MyTodoList.util;
 
 import com.springboot.MyTodoList.dto.TaskResponseDTO;
-import com.springboot.MyTodoList.dto.SprintRequestDTO;
 import com.springboot.MyTodoList.model.Sprint;
 import com.springboot.MyTodoList.model.Task;
 import com.springboot.MyTodoList.model.TaskGroup;
@@ -23,9 +22,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeParseException;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -44,14 +41,8 @@ public class BotActions{
     private static final String TASK_START_PREFIX = "TASKSTART::";
     private static final String TASK_MOVE_PREFIX = "TASKMOVE::";
     private static final float MAX_ESTIMATED_HOURS_PER_TASK = 4f;
+    private static final int MAX_SPLIT_TASKS = 100;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-    private static final DateTimeFormatter DATE_TIME_ISO_MINUTES_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
-    private static final DateTimeFormatter DATE_TIME_SLASH_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-    private static final DateTimeFormatter DATE_ONLY_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final Pattern CREATE_SPRINT_COMMAND_PATTERN = Pattern.compile(
-            "^/?createsprint(?:@\\w+)?(?:\\s+.*)?$",
-            Pattern.CASE_INSENSITIVE
-    );
             private static final Pattern REGISTER_USER_PATTERN = Pattern.compile(
                 "^/?registeruser(?:@\\w+)?\\s+(.+?)\\s+([^\\s]+)\\s+([^\\s]+)\\s+([^\\s]+)\\s*$",
             Pattern.CASE_INSENSITIVE
@@ -63,10 +54,9 @@ public class BotActions{
                 private static final Pattern START_DEBUG_PATTERN = Pattern.compile(
                         "^/?start(?:@\\w+)?\\s+-d\\s*$",
                     Pattern.CASE_INSENSITIVE
-                );
+    );
     private static final Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, String> pendingTaskTitleByChat = new ConcurrentHashMap<>();
-    private static final Map<Long, Boolean> pendingCreateSprintByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> pendingMoveSprintTaskByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> pendingCompleteTaskByChat = new ConcurrentHashMap<>();
@@ -219,42 +209,6 @@ public class BotActions{
         pendingCompleteTaskByChat.remove(chatId);
     }
 
-    private boolean isPendingCreateSprint() {
-        return pendingCreateSprintByChat.containsKey(chatId);
-    }
-
-    private void setPendingCreateSprint(boolean pending) {
-        if (pending) {
-            pendingCreateSprintByChat.put(chatId, Boolean.TRUE);
-            return;
-        }
-        pendingCreateSprintByChat.remove(chatId);
-    }
-
-    private LocalDateTime parseSprintDateTime(String rawValue, boolean isEndDate) {
-        String value = rawValue != null ? rawValue.trim() : "";
-        if (value.isEmpty()) {
-            throw new DateTimeParseException("Empty date", value, 0);
-        }
-
-        DateTimeFormatter[] dateTimeFormatters = new DateTimeFormatter[] {
-                DATE_TIME_FORMATTER,
-                DATE_TIME_ISO_MINUTES_FORMATTER,
-                DATE_TIME_SLASH_FORMATTER
-        };
-
-        for (DateTimeFormatter formatter : dateTimeFormatters) {
-            try {
-                return LocalDateTime.parse(value, formatter);
-            } catch (DateTimeParseException ignored) {
-                // Try next supported format.
-            }
-        }
-
-        LocalDate parsedDate = LocalDate.parse(value, DATE_ONLY_FORMATTER);
-        return isEndDate ? parsedDate.atTime(23, 59) : parsedDate.atStartOfDay();
-    }
-
     private String statusTag(TaskStatus status) {
         if (status == null) {
             return "[PENDING]";
@@ -370,13 +324,29 @@ public class BotActions{
         return value == null ? "-" : String.format("%.1f", value);
     }
 
+    private Float parseHours(String rawValue) {
+        String normalizedValue = rawValue != null ? rawValue.trim().replace(',', '.') : "";
+        if (normalizedValue.isEmpty()) {
+            throw new NumberFormatException("Hours are required");
+        }
+
+        Float hours = Float.parseFloat(normalizedValue);
+        if (!Float.isFinite(hours)) {
+            throw new NumberFormatException("Hours must be finite");
+        }
+        return hours;
+    }
+
+    private boolean exceedsEstimatedHoursLimit(Float estimatedHours) {
+        return estimatedHours > MAX_ESTIMATED_HOURS_PER_TASK * MAX_SPLIT_TASKS;
+    }
+
     private ReplyKeyboardMarkup buildMainMenuKeyboard() {
         return ReplyKeyboardMarkup
                 .builder()
                 .keyboardRow(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(), BotLabels.ADD_NEW_ITEM.getLabel()))
                 .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel(), BotLabels.CREATE_GROUP.getLabel()))
                 .keyboardRow(new KeyboardRow(BotLabels.LIST_SPRINT_TASKS.getLabel(), BotLabels.LIST_SPRINTS.getLabel()))
-                .keyboardRow(new KeyboardRow(BotLabels.CREATE_SPRINT.getLabel()))
                 .keyboardRow(new KeyboardRow(BotLabels.SHOW_MAIN_SCREEN.getLabel(), BotLabels.HIDE_MAIN_SCREEN.getLabel()))
                 .build();
     }
@@ -577,7 +547,7 @@ public class BotActions{
             welcomeMessage = "Hello, " + requesterUser.getName().trim() + "!\n" + welcomeMessage;
         }
 
-        welcomeMessage += "\n\nSprint commands:\n/sprints\n/createsprint name|yyyy-MM-dd HH:mm|yyyy-MM-dd HH:mm";
+        welcomeMessage += "\n\nSprint commands:\n/sprints";
 
         String roleMessage = "";
         String userIdText = "N/A";
@@ -955,92 +925,6 @@ public class BotActions{
         exit = true;
     }
 
-    public void fnCreateSprint() {
-        if (exit || requestText == null) {
-            return;
-        }
-
-        String normalizedRequest = requestText.trim();
-        boolean pendingCreateSprint = isPendingCreateSprint();
-        boolean isCreateSprintButton = normalizedRequest.equals(BotLabels.CREATE_SPRINT.getLabel());
-        boolean isCreateSprintCommand = CREATE_SPRINT_COMMAND_PATTERN.matcher(normalizedRequest).matches();
-        
-        if (!pendingCreateSprint && !isCreateSprintButton && !isCreateSprintCommand) {
-            return;
-        }
-
-        if (isCreateSprintButton) {
-            setPendingCreateSprint(true);
-            sendMessageWithMainMenu(BotMessages.CREATE_SPRINT_FORMAT.getMessage());
-            exit = true;
-            return;
-        }
-
-        String payload = isCreateSprintCommand
-                ? normalizedRequest.replaceFirst("(?i)^/?createsprint(?:@\\w+)?\\s*", "")
-                : normalizedRequest;
-        String[] parts = payload.split("\\s*[|;]\\s*");
-        
-        if (parts.length < 3) {
-            setPendingCreateSprint(true);
-            sendMessageWithMainMenu(BotMessages.CREATE_SPRINT_FORMAT.getMessage());
-            exit = true;
-            return;
-        }
-
-        String name = parts[0].trim();
-        String startText = parts[1].trim();
-        String endText = parts[2].trim();
-        Long groupId = null;
-
-        if (parts.length >= 4 && parts[3] != null && !parts[3].trim().isEmpty()) {
-            try {
-                groupId = Long.valueOf(parts[3].trim());
-            } catch (NumberFormatException nfe) {
-                setPendingCreateSprint(true);
-                sendMessageWithMainMenu("Invalid groupId. Use a numeric value as optional 4th field.");
-                exit = true;
-                return;
-            }
-        }
-
-        try {
-            LocalDateTime startDate = parseSprintDateTime(startText, false);
-            LocalDateTime endDate = parseSprintDateTime(endText, true);
-
-            if (endDate.isBefore(startDate)) {
-                sendMessageWithMainMenu("Sprint end date cannot be before start date.");
-                exit = true;
-                return;
-            }
-
-            SprintRequestDTO sprintRequest = new SprintRequestDTO();
-            sprintRequest.setName(name);
-            sprintRequest.setStartDate(startDate);
-            sprintRequest.setEndDate(endDate);
-            sprintRequest.setGroupId(groupId);
-
-            Sprint createdSprint = sprintService.createSprint(sprintRequest);
-
-            String message = String.format(BotMessages.SPRINT_CREATED.getMessage(), createdSprint.getName(), createdSprint.getId());
-            sendMessageWithMainMenu(message);
-            setPendingCreateSprint(false);
-            exit = true;
-        } catch (DateTimeParseException dte) {
-            setPendingCreateSprint(true);
-            sendMessageWithMainMenu("Invalid date format. Use one of: yyyy-MM-dd HH:mm, yyyy-MM-dd'T'HH:mm, dd/MM/yyyy HH:mm, or yyyy-MM-dd.");
-            exit = true;
-        } catch (RuntimeException re) {
-            setPendingCreateSprint(true);
-            sendMessageWithMainMenu("Sprint creation failed: " + re.getMessage());
-            exit = true;
-        } catch (Exception e) {
-            setPendingCreateSprint(true);
-            sendMessageWithMainMenu("Unexpected error creating sprint: " + e.getMessage());
-            exit = true;
-        }
-    }
-
     public void fnRegisterUser() {
         if (requestText == null || exit) {
             return;
@@ -1175,7 +1059,7 @@ public class BotActions{
 
             Float estimatedHours;
             try {
-                estimatedHours = Float.parseFloat(input);
+                estimatedHours = parseHours(input);
             } catch (NumberFormatException e) {
                 sendMessageWithMainMenu(BotMessages.INVALID_HOURS.getMessage());
                 exit = true;
@@ -1184,6 +1068,12 @@ public class BotActions{
 
             if (estimatedHours <= 0) {
                 sendMessageWithMainMenu("Hours must be greater than 0.");
+                exit = true;
+                return;
+            }
+
+            if (exceedsEstimatedHoursLimit(estimatedHours)) {
+                sendMessageWithMainMenu(BotMessages.ESTIMATED_HOURS_TOO_LARGE.getMessage());
                 exit = true;
                 return;
             }
@@ -1232,9 +1122,10 @@ public class BotActions{
             return;
         }
 
-        Float estimatedHours = null;
+        String hoursToken = parts[parts.length - 1];
+        Float estimatedHours;
         try {
-            estimatedHours = Float.parseFloat(parts[parts.length - 1]);
+            estimatedHours = parseHours(hoursToken);
             if (estimatedHours <= 0) {
                 sendMessageWithMainMenu("Hours must be greater than 0.");
                 exit = true;
@@ -1246,7 +1137,13 @@ public class BotActions{
             return;
         }
 
-        String title = payload.substring(0, payload.lastIndexOf(String.valueOf(estimatedHours))).trim();
+        if (exceedsEstimatedHoursLimit(estimatedHours)) {
+            sendMessageWithMainMenu(BotMessages.ESTIMATED_HOURS_TOO_LARGE.getMessage());
+            exit = true;
+            return;
+        }
+
+        String title = payload.substring(0, payload.length() - hoursToken.length()).trim();
         if (title.isEmpty()) {
             sendMessageWithMainMenu(BotMessages.ADD_TASK_FORMAT.getMessage());
             exit = true;
