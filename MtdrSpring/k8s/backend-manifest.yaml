@@ -87,12 +87,12 @@ spec:
                 secretKeyRef:
                   name: google-genai-secret
                   key: GOOGLE_GENAI_EMBEDDING_API_KEY
-                        - name: ui_password
-                          valueFrom:
-                            secretKeyRef:
-                              name: frontendadmin
-                              key: password
-                              optional: true
+            - name: ui_password
+              valueFrom:
+                secretKeyRef:
+                  name: frontendadmin
+                  key: password
+                  optional: true
           # [P7-DBG] backend bootstrap trace in pod logs
           lifecycle:
             postStart:
