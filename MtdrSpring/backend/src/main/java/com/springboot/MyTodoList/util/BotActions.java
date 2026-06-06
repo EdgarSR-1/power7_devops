@@ -647,7 +647,7 @@ public class BotActions{
                 return;
             }
 
-            taskGroupService.createGroupForBot(groupName);
+            taskGroupService.createGroupForBot(groupName, requesterUser);
 
             BotHelper.sendMessageToTelegram(chatId, BotMessages.NEW_GROUP_ADDED.getMessage(), telegramClient);
         } catch (Exception e) {
@@ -663,7 +663,12 @@ public class BotActions{
                 || requestText.equals(BotLabels.SELECT_GROUP.getLabel())) || exit)
             return;
 
-        List<TaskGroup> groups = taskGroupService.findAll();
+        List<TaskGroup> groups = taskGroupService.findAccessibleGroups(requesterUser);
+        if (groups.isEmpty()) {
+            sendMessageWithMainMenu("No groups available for your user.");
+            exit = true;
+            return;
+        }
         ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup.builder()
             .resizeKeyboard(true)
             .oneTimeKeyboard(false)
@@ -1118,7 +1123,12 @@ public class BotActions{
 				|| requestText.contains(BotLabels.ADD_NEW_ITEM.getLabel())) || exit )
             return;
 
-        List<TaskGroup> groups = taskGroupService.findAll();
+        List<TaskGroup> groups = taskGroupService.findAccessibleGroups(requesterUser);
+        if (groups.isEmpty()) {
+            sendMessageWithMainMenu("No groups available for your user.");
+            exit = true;
+            return;
+        }
         ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup.builder()
                 .resizeKeyboard(true)
                 .oneTimeKeyboard(false)
@@ -1271,9 +1281,9 @@ public class BotActions{
         }
 
         try {
-            List<TaskGroup> groups = taskGroupService.findAll();
+            List<TaskGroup> groups = taskGroupService.findAccessibleGroups(requesterUser);
             if (groups.isEmpty()) {
-                sendMessageWithMainMenu("No groups found. Create one first.");
+                sendMessageWithMainMenu("No groups available for your user. Create or join a group first.");
                 exit = true;
                 return;
             }
