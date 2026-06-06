@@ -11,11 +11,15 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
+
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthFilter.class);
 
     private final JwtService jwtService;
     private final CustomUserDetailsService userDetailsService;
@@ -34,11 +38,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     final String jwtToken;
     final String userEmail;
 
-    System.out.println("PATH: " + request.getRequestURI());
-    System.out.println("AUTH HEADER: " + authHeader);
+    logger.debug("PATH: {}", request.getRequestURI());
+    logger.debug("AUTH HEADER: {}", authHeader);
 
     if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-        System.out.println("No Bearer token found");
+        logger.debug("No Bearer token found");
         filterChain.doFilter(request, response);
         return;
     }
@@ -47,19 +51,19 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     try {
         userEmail = jwtService.extractEmail(jwtToken);
-        System.out.println("EMAIL FROM TOKEN: " + userEmail);
+        logger.debug("EMAIL FROM TOKEN: {}", userEmail);
     } catch (Exception e) {
-        System.out.println("TOKEN ERROR: " + e.getMessage());
+        logger.debug("TOKEN ERROR: {}", e.getMessage());
         filterChain.doFilter(request, response);
         return;
     }
 
     if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
         UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
-        System.out.println("USERDETAILS USERNAME: " + userDetails.getUsername());
+        logger.debug("USERDETAILS USERNAME: {}", userDetails.getUsername());
 
         if (jwtService.isTokenValid(jwtToken)) {
-            System.out.println("TOKEN VALID");
+            logger.debug("TOKEN VALID");
             UsernamePasswordAuthenticationToken authToken =
                     new UsernamePasswordAuthenticationToken(
                             userDetails,
@@ -69,9 +73,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authToken);
-            System.out.println("AUTHENTICATION SET");
+            logger.debug("AUTHENTICATION SET");
         } else {
-            System.out.println("TOKEN INVALID");
+            logger.debug("TOKEN INVALID");
         }
     }
 

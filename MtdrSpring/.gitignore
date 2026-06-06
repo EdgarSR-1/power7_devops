@@ -1,3 +1,12 @@
 **/node_modules/**
 **/build/**
 **/target/**
+*.log.*.gz
+
+# JMeter local binaries and generated output
+apache-jmeter-*/
+jmeter.log
+jmeter-results/
+jmeter-reports/
+/performance/jmeter/results/
+/performance/jmeter/reports/

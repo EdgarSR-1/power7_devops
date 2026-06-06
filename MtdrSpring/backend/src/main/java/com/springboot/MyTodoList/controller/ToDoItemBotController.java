@@ -14,6 +14,7 @@ import com.springboot.MyTodoList.util.BotMessages;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.BotSession;
@@ -28,6 +29,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 @Component
+@ConditionalOnProperty(prefix = "telegram.bot", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class ToDoItemBotController  implements SpringLongPollingBot, LongPollingSingleThreadUpdateConsumer {
 	private static final Pattern REGISTER_USER_COMMAND_PATTERN = Pattern.compile("^/?registeruser(?:@\\w+)?(?:\\s+.*)?$", Pattern.CASE_INSENSITIVE);
 	private static final Pattern START_COMMAND_PATTERN = Pattern.compile("^/?start(?:@\\w+)?(?:\\s+-d)?\\s*$", Pattern.CASE_INSENSITIVE);

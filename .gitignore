@@ -3,6 +3,7 @@
 
 # Log file
 *.log
+*.log.*.gz
 
 # BlueJ files
 *.ctxt
@@ -61,3 +62,11 @@ frontend/yarn-error.log*
 /MtdrSpring/backend/Dockerfile
 /MtdrSpring/backend/wallet
 MtdrSpring/backend/DockerfileDev
+
+# JMeter local binaries and generated output
+apache-jmeter-*/
+jmeter.log
+jmeter-results/
+jmeter-reports/
+/MtdrSpring/performance/jmeter/results/
+/MtdrSpring/performance/jmeter/reports/

@@ -1,0 +1,81 @@
+---
+sidebar_position: 15
+---
+
+# Arquitectura local: entrada simple desde raíz
+
+## Decisión de diseño
+
+La idea es que después de clonar el repo, solo necesites:
+
+```bash
+./scripts/setup.sh  # Una sola vez, interactivo
+./scripts/build.sh  # Compila y empaqueta la imagen
+```
+
+Sin necesidad de recordar rutas internas o ejecutar pasos ocultos.
+
+## Cómo funciona
+
+- Único punto de entrada: `./scripts/` desde la raíz.
+- `scripts/setup.sh` es interactivo: pregunta por perfil (local/oracle), JWT secret, credenciales UI, y opcionalmente wallet Oracle.
+- `scripts/build.sh` verifica que exista `.env.local`; si falta, informa qué hacer en lugar de fallar silenciosamente.
+- `scripts/deploy.sh` y `scripts/undeploy.sh` están listos para el flujo OCI (en desarrollo).
+
+## Ventajas
+
+1. **Claridad**: El punto de entrada es obvio: raíz, entrypoint directo.
+2. **Escalabilidad**: Nuevos scripts van a `scripts/`, sin sobrecargar la raíz.
+3. **Detectabilidad**: Si algo falta, los scripts dicen qué falta y sugieren el siguiente paso.
+4. **Flexibilidad de perfil**: Local (H2) vs Oracle sin magia; el usuario elige.
+5. **Wallet seguro**: No entra en la imagen; se monta solo en runtime cuando se necesita.
+6. **Secretos locales**: `.env.local` debe estar `.gitignore`-ado, así los secretos nunca suben.
+
+## Riesgos y mitigación
+
+### 1. Lógica local en scripts/
+
+- **Riesgo**: `scripts/build.sh` hace mvn + docker directamente, no delegación. Si cambias paths, puede fallar.
+- **Mitigación**: Los paths están explícitos y documentados en cada script. Si cambias `MtdrSpring/backend/`, actualiza los paths en `scripts/build.sh`.
+- **Impacto**: Bajo si documentas los cambios. Evitas 3 niveles de indirección, ganando claridad.
+
+### 2. Estado corrupto o parcial
+
+- **Riesgo**: Si `.env.local` queda a mitad de configurar o con valores inválidos, `build.sh` puede fallar con un mensaje poco claro.
+- **Mitigación**: El `setup.sh` sobrescribe `.env.local` completamente, así que reiniciar setup limpia el estado. Documentar esto.
+- **Impacto**: Bajo si el usuario sigue los pasos en orden.
+
+### 3. CI/CD incompatible con interactivo
+
+- **Riesgo**: `setup.sh` pide entrada interactiva; en CI/CD eso revienta a menos que se pase `--non-interactive` o variables de entorno.
+- **Mitigación**: Hacer que `setup.sh` acepte vars de entorno como fallback: `JWT_SECRET=xxx SPRING_PROFILES_ACTIVE=oracle ./setup.sh`.
+- **Impacto**: No crítico si documentas bien que setup es dev-only. Para CI/CD, usarás `deploy.sh` o un flujo OCI directo.
+
+### 4. Secretos en `.env.local`
+
+- **Riesgo**: El archivo vive local y debe estar gitignore-ado, pero al copiar o compartir código, alguien podría accidentalmente incluirlo.
+- **Mitigación**: Checks en CI: `grep -r "JWT_SECRET=.*[a-zA-Z0-9]" src/` para detectar secretos duros en código. Documentar `.gitignore` explícitamente.
+- **Impacto**: Bajo si sigues la convención. Alto si un colaborador no lee la doc.
+
+### 5. Múltiples perfiles sin claridad
+
+- **Riesgo**: Usuario elige perfil "local" pero luego intenta conectar a Oracle; o elige "oracle" pero no tiene wallet.
+- **Mitigación**: El `setup.sh` explica qué requiere cada perfil. El build no empaqueta el wallet en la imagen de todos modos.
+- **Impacto**: Bajo; solo requiere que el usuario lea los prompts de setup.
+
+## Flujo típico de onboarding
+
+1. Clonar el repo.
+2. Correr `./setup.sh` → elige perfil → llena secretos → listo.
+3. Correr `./build.sh` → Maven compila → Docker empaqueta → imagen lista.
+4. (Opcional) `RUN_LOCAL=1 ./build.sh` → corre el contenedor en localhost:8080 si es perfil local.
+5. Documentar en tu sistema de secretos (Vault, 1Password, etc.) dónde guardar los valores para los pares de desarrollo.
+
+## Decisión final
+
+**Tu idea es buena**. Los riesgos son mitigables con documentación y convenciones claras. La arquitectura permite:
+- Que alguien nuevo entre sin quebraderos de cabeza.
+- Que el repo siga siendo limpio en la raíz (solo 4 wrappers).
+- Que el flujo escale sin duplicación lógica.
+
+Lo único que NO debe cambiar: **el wallet nunca entra en la imagen**, y **los secretos siempre se cargan en runtime**, no en build.
