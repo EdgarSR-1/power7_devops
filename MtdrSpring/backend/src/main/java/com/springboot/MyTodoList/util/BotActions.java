@@ -374,7 +374,7 @@ public class BotActions{
         return ReplyKeyboardMarkup
                 .builder()
                 .keyboardRow(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(), BotLabels.ADD_NEW_ITEM.getLabel()))
-                // .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel(), BotLabels.CREATE_GROUP.getLabel()))
+                .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel())) //, BotLabels.CREATE_GROUP.getLabel()
                 .keyboardRow(new KeyboardRow(BotLabels.LIST_SPRINT_TASKS.getLabel(), BotLabels.LIST_SPRINTS.getLabel()))
                 .keyboardRow(new KeyboardRow(BotLabels.CREATE_SPRINT.getLabel()))
                 .keyboardRow(new KeyboardRow(BotLabels.SHOW_MAIN_SCREEN.getLabel(), BotLabels.HIDE_MAIN_SCREEN.getLabel()))
@@ -611,13 +611,13 @@ public class BotActions{
         exit = true;
     }
 
-    //public void fnCreateGroupPrompt() {
-    //   if (!(requestText.equals(BotLabels.CREATE_GROUP.getLabel())) || exit)
-    //        return;
+    public void fnCreateGroupPrompt() {
+      if (!(requestText.equals(BotLabels.CREATE_GROUP.getLabel())) || exit)
+           return;
 
-    //     BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_GROUP_NAME.getMessage(), telegramClient);
-    //     exit = true;
-    // }
+        BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_GROUP_NAME.getMessage(), telegramClient);
+        exit = true;
+    }
 
     public void fnCreateGroup() {
         if (!requestText.startsWith(BotLabels.NEW_GROUP_PREFIX.getLabel()) || exit)
@@ -647,7 +647,7 @@ public class BotActions{
                 || requestText.equals(BotLabels.SELECT_GROUP.getLabel())) || exit)
             return;
 
-        List<TaskGroup> groups = taskGroupService.findAll();
+        List<TaskGroup> groups = taskGroupService.findGroupsForUser(requesterUser);
         ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup.builder()
             .resizeKeyboard(true)
             .oneTimeKeyboard(false)
@@ -1102,7 +1102,7 @@ public class BotActions{
 				|| requestText.contains(BotLabels.ADD_NEW_ITEM.getLabel())) || exit )
             return;
 
-        List<TaskGroup> groups = taskGroupService.findAll();
+        List<TaskGroup> groups = taskGroupService.findGroupsForUser(requesterUser);
         ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup.builder()
                 .resizeKeyboard(true)
                 .oneTimeKeyboard(false)
@@ -1189,6 +1189,13 @@ public class BotActions{
                 return;
             }
 
+            logger.info(
+                "Creating task. groupId={} userId={} title={} hours={}",
+                selectedGroupId,
+                requesterUser.getId(),
+                pendingTitle,
+                estimatedHours
+            );
             taskService.createTaskInGroupWithHours(selectedGroupId, pendingTitle, estimatedHours, requesterUser);
             pendingTaskGroupByChat.remove(chatId);
             pendingTaskTitleByChat.remove(chatId);
@@ -1255,7 +1262,7 @@ public class BotActions{
         }
 
         try {
-            List<TaskGroup> groups = taskGroupService.findAll();
+            List<TaskGroup> groups = taskGroupService.findGroupsForUser(requesterUser);
             if (groups.isEmpty()) {
                 sendMessageWithMainMenu("No se encontraron grupos. Crea uno primero.");
                 exit = true;
@@ -1404,7 +1411,7 @@ public class BotActions{
             sendMessageWithMainMenu(message);
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
-            sendMessageWithMainMenu(BotMessages.TASK_NOT_FOUND.getMessage());
+            sendMessageWithMainMenu("ERROR: " + e.getMessage());
         }
         exit = true;
     }
@@ -1424,7 +1431,12 @@ public class BotActions{
                     exit = true;
                     return;
                 }
-
+                logger.info(
+                    "Completing task {} requesterUser={} requesterId={}",
+                    pendingTaskId,
+                    requesterUser.getName(),
+                    requesterUser.getId()
+                );
                 taskService.completeTask(pendingTaskId, actualHours, requesterUser);
                 clearPendingCompleteTask();
 
@@ -1437,7 +1449,7 @@ public class BotActions{
                 }
             } catch (Exception e) {
                 logger.error(e.getLocalizedMessage(), e);
-                sendMessageWithMainMenu(BotMessages.TASK_NOT_FOUND.getMessage());
+                sendMessageWithMainMenu("ERROR: " + e.getMessage());
             }
 
             exit = true;
@@ -1487,27 +1499,27 @@ public class BotActions{
             sendMessageWithMainMenu(message);
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
-            sendMessageWithMainMenu(BotMessages.TASK_NOT_FOUND.getMessage());
+            sendMessageWithMainMenu("ERROR: " + e.getMessage());
         }
         exit = true;
     }
 
-    // public void fnLLM(){
-    //     logger.info("Calling LLM");
-    //     if (!(requestText.contains(BotCommands.LLM_REQ.getCommand())) || exit)
-    //         return;
+    public void fnLLM(){
+        logger.info("Calling LLM");
+        if (!(requestText.contains(BotCommands.LLM_REQ.getCommand())) || exit)
+            return;
         
-    //     String prompt = "Dame los datos del clima en mty";
-    //     String out = "<empty>";
-    //     try{
-    //         out = deepSeekService.generateText(prompt);
-    //     }catch(Exception exc){
+        String prompt = "Dame los datos del clima en mty";
+        String out = "<empty>";
+        try{
+            out = deepSeekService.generateText(prompt);
+        }catch(Exception exc){
 
-    //     }
+        }
 
-    //     BotHelper.sendMessageToTelegram(chatId, "LLM: "+out, telegramClient, null);
+        BotHelper.sendMessageToTelegram(chatId, "LLM: "+out, telegramClient, null);
 
-    // }
+    }
 
 
 }
