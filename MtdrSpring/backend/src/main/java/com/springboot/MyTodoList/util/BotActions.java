@@ -257,16 +257,16 @@ public class BotActions{
 
     private String statusTag(TaskStatus status) {
         if (status == null) {
-            return "[PENDING]";
+            return "[Pendiente]";
         }
         switch (status) {
             case completed:
-                return "[COMPLETED]";
+                return "[Completado]";
             case in_progress:
-                return "[IN_PROGRESS]";
+                return "[En progreso]";
             case pending:
             default:
-                return "[PENDING]";
+                return "[Pendiente]";
         }
     }
 
@@ -277,13 +277,13 @@ public class BotActions{
         try {
             return statusTag(TaskStatus.valueOf(statusValue));
         } catch (Exception ignored) {
-            return "[PENDING]";
+            return "[Pendiente]";
         }
     }
 
     private String buildGroupStatusSummary(List<Task> tasks) {
         if (tasks == null || tasks.isEmpty()) {
-            return "\n\nNo tasks in this group yet.";
+            return "\n\nNo hay tareas en este grupo aún.";
         }
 
         long pendingCount = tasks.stream().filter(task -> task.getStatus() == TaskStatus.pending).count();
@@ -291,11 +291,11 @@ public class BotActions{
         long completedCount = tasks.stream().filter(task -> task.getStatus() == TaskStatus.completed).count();
 
         StringBuilder summary = new StringBuilder();
-        summary.append("\n\nStatus Summary")
-                .append("\nPENDING: ").append(pendingCount)
-                .append("\nIN_PROGRESS: ").append(inProgressCount)
-                .append("\nCOMPLETED: ").append(completedCount)
-                .append("\n\nTasks:");
+        summary.append("\n\nResumen de tareas:")
+                .append("\nPendiente: ").append(pendingCount)
+                .append("\nEn Progreso: ").append(inProgressCount)
+                .append("\nCompletadas: ").append(completedCount)
+                .append("\n\nTareas:");
 
         for (Task task : tasks) {
             summary.append("\n#")
@@ -306,16 +306,16 @@ public class BotActions{
                     .append(task.getTitle())
                     .append("\n  Sprint: ")
                     .append(task.getSprint() != null && task.getSprint().getName() != null ? task.getSprint().getName() : "-")
-                    .append("\n  Estimated: ")
+                    .append("\n  Estimado: ")
                     .append(formatHours(task.getEstimatedHours()))
                     .append("h | Actual: ")
                     .append(formatHours(task.getActualHours()))
                     .append("h")
-                    .append("\n  Start: ")
+                    .append("\n  Inicio: ")
                     .append(formatDateTime(task.getStartDate()))
-                    .append(" | End: ")
+                    .append(" | Fin: ")
                     .append(formatDateTime(task.getEndDate()))
-                    .append(" | Due: ")
+                    .append(" | Vencimiento: ")
                     .append(formatDateTime(task.getDueDate()));
         }
 
@@ -324,17 +324,17 @@ public class BotActions{
 
     private String buildAllTasksSummary(Map<String, List<TaskResponseDTO>> tasksByGroup) {
         if (tasksByGroup == null || tasksByGroup.isEmpty()) {
-            return "\n\nNo tasks available.";
+            return "\n\nNo hay tareas disponibles.";
         }
 
-        StringBuilder summary = new StringBuilder("\n\nTasks Overview");
+        StringBuilder summary = new StringBuilder("\n\nTodas las tareas");
         for (Map.Entry<String, List<TaskResponseDTO>> groupEntry : tasksByGroup.entrySet()) {
             summary.append("\n\n[")
                     .append(groupEntry.getKey())
                     .append("]");
 
             if (groupEntry.getValue().isEmpty()) {
-                summary.append("\n- No tasks");
+                summary.append("\n- No hay tareas");
                 continue;
             }
 
@@ -347,11 +347,11 @@ public class BotActions{
                         .append(task.getTitle())
                         .append("\n  Sprint: ")
                         .append(task.getSprintName() != null ? task.getSprintName() : "-")
-                        .append("\n  Start: ")
+                        .append("\n  Inicio: ")
                         .append(formatDateTime(task.getStartDate()))
-                        .append(" | End: ")
+                        .append(" | Fin: ")
                         .append(formatDateTime(task.getEndDate()))
-                        .append(" | Due: ")
+                        .append(" | Vencimiento: ")
                         .append(formatDateTime(task.getDueDate()));
             }
         }
@@ -407,18 +407,18 @@ public class BotActions{
                 .append(" (#")
                 .append(sprint.getId())
                 .append(")\n")
-                .append("Range: ")
+                .append("Rango: ")
                 .append(formatDateTime(sprint.getStartDate()))
                 .append(" -> ")
                 .append(formatDateTime(sprint.getEndDate()))
-                .append("\n\nStatus Summary")
-                .append("\nPENDING: ").append(pendingTasks.size())
-                .append("\nIN_PROGRESS: ").append(inProgressTasks.size())
-                .append("\nCOMPLETED: ").append(completedTasks.size());
+                .append("\n\nResumen de tareas:")
+                .append("\nPendiente: ").append(pendingTasks.size())
+                .append("\nEn progreso: ").append(inProgressTasks.size())
+                .append("\nCompletado: ").append(completedTasks.size());
 
-        appendTaskSection(summary, "PENDING", pendingTasks);
-        appendTaskSection(summary, "IN_PROGRESS", inProgressTasks);
-        appendTaskSection(summary, "COMPLETED", completedTasks);
+        appendTaskSection(summary, "Pendiente", pendingTasks);
+        appendTaskSection(summary, "En progreso", inProgressTasks);
+        appendTaskSection(summary, "Completado", completedTasks);
 
         sendMessageWithMainMenu(summary.toString());
     }
@@ -426,7 +426,7 @@ public class BotActions{
     private void appendTaskSection(StringBuilder summary, String sectionTitle, List<Task> tasks) {
         summary.append("\n\n[").append(sectionTitle).append("]");
         if (tasks.isEmpty()) {
-            summary.append("\n- No tasks");
+            summary.append("\n- No hay tareas");
             return;
         }
 
@@ -435,16 +435,16 @@ public class BotActions{
                     .append(task.getId())
                     .append(" ")
                     .append(task.getTitle())
-                    .append("\n  Estimated: ")
+                    .append("\n  Estimado: ")
                     .append(formatHours(task.getEstimatedHours()))
                     .append("h | Actual: ")
                     .append(formatHours(task.getActualHours()))
                     .append("h")
-                    .append("\n  Start: ")
+                    .append("\n  Inicio: ")
                     .append(formatDateTime(task.getStartDate()))
-                    .append(" | End: ")
+                    .append(" | Fin: ")
                     .append(formatDateTime(task.getEndDate()))
-                    .append(" | Due: ")
+                    .append(" | Vencimiento: ")
                     .append(formatDateTime(task.getDueDate()));
         }
     }
@@ -472,7 +472,7 @@ public class BotActions{
 
         Map<String, List<TaskResponseDTO>> tasksByGroup = new LinkedHashMap<>();
         for (TaskResponseDTO task : allTasks) {
-            String groupName = task.getGroupName() != null ? task.getGroupName() : "No Group";
+            String groupName = task.getGroupName() != null ? task.getGroupName() : "Sin grupo";
             tasksByGroup.computeIfAbsent(groupName, key -> new ArrayList<>()).add(task);
         }
 
@@ -486,14 +486,14 @@ public class BotActions{
                 taskRow.add(statusTagFromString(task.getStatus()) + " " + task.getTitle());
                 String status = task.getStatus() != null ? task.getStatus() : TaskStatus.pending.name();
                 if (TaskStatus.completed.name().equals(status)) {
-                    taskRow.add(registerTaskActionButton("Undo #" + task.getId(), TASK_UNDO_PREFIX + task.getId()));
-                    taskRow.add(registerTaskActionButton("Delete #" + task.getId(), TASK_DELETE_PREFIX + task.getId()));
+                    taskRow.add(registerTaskActionButton("Deshacer #" + task.getId(), TASK_UNDO_PREFIX + task.getId()));
+                    taskRow.add(registerTaskActionButton("Borrar #" + task.getId(), TASK_DELETE_PREFIX + task.getId()));
                 } else if (TaskStatus.pending.name().equals(status)) {
-                    taskRow.add(registerTaskActionButton("Start #" + task.getId(), TASK_START_PREFIX + task.getId()));
-                    taskRow.add(registerTaskActionButton("Move Sprint #" + task.getId(), TASK_MOVE_PREFIX + task.getId()));
+                    taskRow.add(registerTaskActionButton("Iniciar #" + task.getId(), TASK_START_PREFIX + task.getId()));
+                    taskRow.add(registerTaskActionButton("Mover Sprint #" + task.getId(), TASK_MOVE_PREFIX + task.getId()));
                 } else {
-                    taskRow.add(registerTaskActionButton("Move Sprint #" + task.getId(), TASK_MOVE_PREFIX + task.getId()));
-                    taskRow.add(registerTaskActionButton("Done #" + task.getId(), TASK_DONE_PREFIX + task.getId()));
+                    taskRow.add(registerTaskActionButton("Mover Sprint #" + task.getId(), TASK_MOVE_PREFIX + task.getId()));
+                    taskRow.add(registerTaskActionButton("Terminado #" + task.getId(), TASK_DONE_PREFIX + task.getId()));
                 }
                 keyboard.add(taskRow);
             }
@@ -538,11 +538,11 @@ public class BotActions{
             KeyboardRow row = new KeyboardRow();
             row.add(statusTag(task.getStatus()) + " " + task.getTitle());
             if (task.getStatus() == TaskStatus.pending) {
-                row.add(registerTaskActionButton("Start #" + task.getId(), TASK_START_PREFIX + task.getId()));
-                row.add(registerTaskActionButton("Move Sprint #" + task.getId(), TASK_MOVE_PREFIX + task.getId()));
+                row.add(registerTaskActionButton("Iniciar #" + task.getId(), TASK_START_PREFIX + task.getId()));
+                row.add(registerTaskActionButton("Mover Sprint #" + task.getId(), TASK_MOVE_PREFIX + task.getId()));
             } else {
-                row.add(registerTaskActionButton("Move Sprint #" + task.getId(), TASK_MOVE_PREFIX + task.getId()));
-                row.add(registerTaskActionButton("Done #" + task.getId(), TASK_DONE_PREFIX + task.getId()));
+                row.add(registerTaskActionButton("Mover Sprint #" + task.getId(), TASK_MOVE_PREFIX + task.getId()));
+                row.add(registerTaskActionButton("Acabado #" + task.getId(), TASK_DONE_PREFIX + task.getId()));
             }
             keyboard.add(row);
         }
@@ -550,8 +550,8 @@ public class BotActions{
         for (Task task : doneTasks) {
             KeyboardRow row = new KeyboardRow();
             row.add(statusTag(task.getStatus()) + " " + task.getTitle());
-            row.add(registerTaskActionButton("Undo #" + task.getId(), TASK_UNDO_PREFIX + task.getId()));
-            row.add(registerTaskActionButton("Delete #" + task.getId(), TASK_DELETE_PREFIX + task.getId()));
+            row.add(registerTaskActionButton("Deshacer #" + task.getId(), TASK_UNDO_PREFIX + task.getId()));
+            row.add(registerTaskActionButton("Eliminar #" + task.getId(), TASK_DELETE_PREFIX + task.getId()));
             keyboard.add(row);
         }
 
@@ -636,7 +636,7 @@ public class BotActions{
             BotHelper.sendMessageToTelegram(chatId, BotMessages.NEW_GROUP_ADDED.getMessage(), telegramClient);
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
-            BotHelper.sendMessageToTelegram(chatId, "Could not create group", telegramClient);
+            BotHelper.sendMessageToTelegram(chatId, "No se pudo crear el grupo", telegramClient);
         }
 
         exit = true;
@@ -671,7 +671,7 @@ public class BotActions{
         }
 
         keyboardMarkup.setKeyboard(keyboard);
-        BotHelper.sendMessageToTelegram(chatId, "Select a group", telegramClient, keyboardMarkup);
+        BotHelper.sendMessageToTelegram(chatId, "Selecciona un grupo", telegramClient, keyboardMarkup);
         exit = true;
     }
 
@@ -688,10 +688,10 @@ public class BotActions{
             String groupIdToken = actionToken.substring(GROUP_SELECTION_PREFIX.length());
             Long groupId = Long.valueOf(groupIdToken);
 
-            renderGroupTasksMenu(groupId, "Group tasks");
+            renderGroupTasksMenu(groupId, "Tareas del grupo");
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
-            BotHelper.sendMessageToTelegram(chatId, "Could not load tasks for this group", telegramClient);
+            BotHelper.sendMessageToTelegram(chatId, "No se pudieron cargar las tareas para este grupo", telegramClient);
         }
 
         exit = true;
@@ -708,7 +708,7 @@ public class BotActions{
         try {
             Long taskId = Long.valueOf(actionToken.substring(TASK_DONE_PREFIX.length()));
             registerPendingCompleteTask(taskId);
-            sendMessageWithMainMenu("Type the actual hours spent to finish Task #" + taskId + ".");
+            sendMessageWithMainMenu("Escribe la cantidad de horas dedicadas a la tarea : #" + taskId + ".");
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
         }
@@ -728,9 +728,9 @@ public class BotActions{
             taskService.startTask(taskId, requesterUser);
             Long groupId = lastViewedGroupByChat.get(chatId);
             if (groupId != null) {
-                renderGroupTasksMenu(groupId, "Task started!");
+                renderGroupTasksMenu(groupId, "Tarea iniciada!");
             } else {
-                renderAllTasksMenu("Task started!");
+                renderAllTasksMenu("Tarea iniciada!");
             }
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
@@ -857,7 +857,7 @@ public class BotActions{
 				|| requestText.equals(BotLabels.LIST_ALL_ITEMS.getLabel())
 				|| requestText.equals(BotLabels.MY_TODO_LIST.getLabel())) || exit)
             return;
-        renderAllTasksMenu("Tasks grouped by group");
+        renderAllTasksMenu("Tareas agrupadas por grupo:");
         exit = true;
     }
 
@@ -939,7 +939,7 @@ public class BotActions{
                 summary.append("\n#")
                         .append(sprint.getId())
                         .append(" ")
-                        .append(sprint.getName() != null ? sprint.getName() : "(no name)")
+                        .append(sprint.getName() != null ? sprint.getName() : "(sin nombre)")
                         .append("\n  Start: ")
                         .append(formatDateTime(sprint.getStartDate()))
                         .append(" | End: ")
@@ -999,7 +999,7 @@ public class BotActions{
                 groupId = Long.valueOf(parts[3].trim());
             } catch (NumberFormatException nfe) {
                 setPendingCreateSprint(true);
-                sendMessageWithMainMenu("Invalid groupId. Use a numeric value as optional 4th field.");
+                sendMessageWithMainMenu("groupId inválido. Use un valor numérico como el 4to campo opcional.");
                 exit = true;
                 return;
             }
@@ -1010,7 +1010,7 @@ public class BotActions{
             LocalDateTime endDate = parseSprintDateTime(endText, true);
 
             if (endDate.isBefore(startDate)) {
-                sendMessageWithMainMenu("Sprint end date cannot be before start date.");
+                sendMessageWithMainMenu("La fecha de finalización del sprint no puede ser antes de la fecha de inicio.");
                 exit = true;
                 return;
             }
@@ -1029,15 +1029,15 @@ public class BotActions{
             exit = true;
         } catch (DateTimeParseException dte) {
             setPendingCreateSprint(true);
-            sendMessageWithMainMenu("Invalid date format. Use one of: yyyy-MM-dd HH:mm, yyyy-MM-dd'T'HH:mm, dd/MM/yyyy HH:mm, or yyyy-MM-dd.");
+            sendMessageWithMainMenu("Formato de fecha inválido. Use uno de: yyyy-MM-dd HH:mm, yyyy-MM-dd'T'HH:mm, dd/MM/yyyy HH:mm, or yyyy-MM-dd.");
             exit = true;
         } catch (RuntimeException re) {
             setPendingCreateSprint(true);
-            sendMessageWithMainMenu("Sprint creation failed: " + re.getMessage());
+            sendMessageWithMainMenu("Fallo al crear sprint: " + re.getMessage());
             exit = true;
         } catch (Exception e) {
             setPendingCreateSprint(true);
-            sendMessageWithMainMenu("Unexpected error creating sprint: " + e.getMessage());
+            sendMessageWithMainMenu("Error inesperado al crear sprint: " + e.getMessage());
             exit = true;
         }
     }
@@ -1184,7 +1184,7 @@ public class BotActions{
             }
 
             if (estimatedHours <= 0) {
-                sendMessageWithMainMenu("Hours must be greater than 0.");
+                sendMessageWithMainMenu("Las horas deben de ser mayores que 0.");
                 exit = true;
                 return;
             }
@@ -1195,7 +1195,7 @@ public class BotActions{
             renderGroupTasksMenu(selectedGroupId, BotMessages.NEW_ITEM_ADDED.getMessage());
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
-            BotHelper.sendMessageToTelegram(chatId, "Could not create task in selected group", telegramClient);
+            BotHelper.sendMessageToTelegram(chatId, "No se pudo crear la tarea en el grupo seleccionado.", telegramClient);
         }
 
         exit = true;
@@ -1237,7 +1237,7 @@ public class BotActions{
         try {
             estimatedHours = Float.parseFloat(parts[parts.length - 1]);
             if (estimatedHours <= 0) {
-                sendMessageWithMainMenu("Hours must be greater than 0.");
+                sendMessageWithMainMenu("Las horas deben de ser mayores que 0.");
                 exit = true;
                 return;
             }
@@ -1257,7 +1257,7 @@ public class BotActions{
         try {
             List<TaskGroup> groups = taskGroupService.findAll();
             if (groups.isEmpty()) {
-                sendMessageWithMainMenu("No groups found. Create one first.");
+                sendMessageWithMainMenu("No se encontraron grupos. Crea uno primero.");
                 exit = true;
                 return;
             }
@@ -1267,7 +1267,7 @@ public class BotActions{
             if (estimatedHours <= MAX_ESTIMATED_HOURS_PER_TASK) {
                 taskService.createTaskInGroupWithHours(defaultGroup.getId(), title, estimatedHours, requesterUser);
                 String message = String.format(BotMessages.TASK_ADDED_WITH_HOURS.getMessage(),
-                        estimatedHours, requesterUser != null ? requesterUser.getName() : "Unknown");
+                        estimatedHours, requesterUser != null ? requesterUser.getName() : "Desconocido");
                 sendMessageWithMainMenu(message);
             } else {
                 int partsCount = (int) Math.ceil(estimatedHours / MAX_ESTIMATED_HOURS_PER_TASK);
@@ -1284,13 +1284,13 @@ public class BotActions{
                         BotMessages.TASK_SPLIT_CREATED.getMessage(),
                         estimatedHours,
                         partsCount,
-                        requesterUser != null ? requesterUser.getName() : "Unknown"
+                        requesterUser != null ? requesterUser.getName() : "Desconocido"
                 );
                 sendMessageWithMainMenu(message);
             }
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
-            sendMessageWithMainMenu("Could not create task: " + e.getMessage());
+            sendMessageWithMainMenu("No se pudo crear la tarea: " + e.getMessage());
         }
         exit = true;
     }
@@ -1329,7 +1329,7 @@ public class BotActions{
             try {
                 Long taskId = Long.valueOf(actionToken.substring(TASK_MOVE_PREFIX.length()));
                 registerPendingMoveSprintTask(taskId);
-                sendMessageWithMainMenu(BotMessages.MOVE_SPRINT_PROMPT.getMessage() + " Task #" + taskId + ".");
+                sendMessageWithMainMenu(BotMessages.MOVE_SPRINT_PROMPT.getMessage() + " Tarea #" + taskId + ".");
             } catch (Exception e) {
                 logger.error(e.getLocalizedMessage(), e);
                 sendMessageWithMainMenu(BotMessages.MOVE_SPRINT_FORMAT.getMessage());
@@ -1420,7 +1420,7 @@ public class BotActions{
             try {
                 Float actualHours = Float.parseFloat(trimmedRequest.replace(',', '.'));
                 if (actualHours <= 0 || actualHours > 40) {
-                    sendMessageWithMainMenu("Hours must be between 0.5 and 40.");
+                    sendMessageWithMainMenu("Horas deben de ser entre 0.5 y 40.");
                     exit = true;
                     return;
                 }
@@ -1445,7 +1445,7 @@ public class BotActions{
         }
 
         if (pendingTaskId != null) {
-            sendMessageWithMainMenu("Type the actual hours spent to finish Task #" + pendingTaskId + ".");
+            sendMessageWithMainMenu("Escribe el número de horas reales dedicadas para finalizar la tarea : #" + pendingTaskId + ".");
             exit = true;
             return;
         }
@@ -1471,7 +1471,7 @@ public class BotActions{
             taskId = Long.parseLong(parts[0]);
             actualHours = Float.parseFloat(parts[1]);
             if (actualHours <= 0 || actualHours > 40) {
-                sendMessageWithMainMenu("Hours must be between 0.5 and 40.");
+                sendMessageWithMainMenu("Horas deben de ser entre 0.5 y 40.");
                 exit = true;
                 return;
             }
