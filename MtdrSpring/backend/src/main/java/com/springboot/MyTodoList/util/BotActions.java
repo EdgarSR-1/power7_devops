@@ -374,7 +374,7 @@ public class BotActions{
         return ReplyKeyboardMarkup
                 .builder()
                 .keyboardRow(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(), BotLabels.ADD_NEW_ITEM.getLabel()))
-                .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel(), BotLabels.CREATE_GROUP.getLabel()))
+                // .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel(), BotLabels.CREATE_GROUP.getLabel()))
                 .keyboardRow(new KeyboardRow(BotLabels.LIST_SPRINT_TASKS.getLabel(), BotLabels.LIST_SPRINTS.getLabel()))
                 .keyboardRow(new KeyboardRow(BotLabels.CREATE_SPRINT.getLabel()))
                 .keyboardRow(new KeyboardRow(BotLabels.SHOW_MAIN_SCREEN.getLabel(), BotLabels.HIDE_MAIN_SCREEN.getLabel()))
@@ -574,49 +574,50 @@ public class BotActions{
 
         String welcomeMessage = BotMessages.HELLO_MYTODO_BOT.getMessage();
         if (requesterUser != null && requesterUser.getName() != null && !requesterUser.getName().isBlank()) {
-            welcomeMessage = "Hello, " + requesterUser.getName().trim() + "!\n" + welcomeMessage;
+            welcomeMessage = "Hola, " + requesterUser.getName().trim() + "!\n" + welcomeMessage;
         }
 
-        welcomeMessage += "\n\nSprint commands:\n/sprints\n/createsprint name|yyyy-MM-dd HH:mm|yyyy-MM-dd HH:mm";
+        welcomeMessage += "\n\nComandos para Sprints:\n/sprints\n/createsprint name|yyyy-MM-dd HH:mm|yyyy-MM-dd HH:mm";
 
-        String roleMessage = "";
-        String userIdText = "N/A";
-        String roleText = "UNREGISTERED";
+        // String roleMessage = "";
+        // String userIdText = "N/A";
+        // String roleText = "UNREGISTERED";
 
-        if (requesterUser != null && requesterUser.getRole() != null) {
-            String roleName = requesterUser.getRole().getName().name();
+        // if (requesterUser != null && requesterUser.getRole() != null) {
+        //     String roleName = requesterUser.getRole().getName().name();
 
-            roleMessage = "\n\nRol: " + roleName;
-            roleText = roleName;
+        //     roleMessage = "\n\nRol: " + roleName;
+        //     roleText = roleName;
 
-            if (requesterUser.getId() != null) {
-                userIdText = String.valueOf(requesterUser.getId());
-            }
-        }
+        //     if (requesterUser.getId() != null) {
+        //         userIdText = String.valueOf(requesterUser.getId());
+        //     }
+        // }
 
-        String identityDebug = "";
-        if (START_DEBUG_PATTERN.matcher(requestText.trim()).matches()) {
-            identityDebug = "\n\nDebug Identity\n"
-                    + "telegramUserId: " + (telegramUserId != null ? telegramUserId : "N/A") + "\n"
-                    + "dbUserId: " + userIdText + "\n"
-                    + "role: " + roleText;
+        // String identityDebug = "";
+        // if (START_DEBUG_PATTERN.matcher(requestText.trim()).matches()) {
+        //     identityDebug = "\n\nDebug Identity\n"
+        //             + "telegramUserId: " + (telegramUserId != null ? telegramUserId : "N/A") + "\n"
+        //             + "dbUserId: " + userIdText + "\n"
+        //             + "role: " + roleText;
 
-            if (requesterUser == null) {
-                identityDebug += "\n" + BotMessages.USER_NOT_REGISTERED.getMessage();
-            }
-        }
+        //     if (requesterUser == null) {
+        //         identityDebug += "\n" + BotMessages.USER_NOT_REGISTERED.getMessage();
+        //     }
+        // }
 
-        BotHelper.sendMessageToTelegram(chatId, welcomeMessage + roleMessage + identityDebug, telegramClient, buildMainMenuKeyboard());
+        // BotHelper.sendMessageToTelegram(chatId, welcomeMessage + roleMessage + identityDebug, telegramClient, buildMainMenuKeyboard());
+        BotHelper.sendMessageToTelegram(chatId, welcomeMessage, telegramClient, buildMainMenuKeyboard());
         exit = true;
     }
 
-    public void fnCreateGroupPrompt() {
-        if (!(requestText.equals(BotLabels.CREATE_GROUP.getLabel())) || exit)
-            return;
+    //public void fnCreateGroupPrompt() {
+    //   if (!(requestText.equals(BotLabels.CREATE_GROUP.getLabel())) || exit)
+    //        return;
 
-        BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_GROUP_NAME.getMessage(), telegramClient);
-        exit = true;
-    }
+    //     BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_GROUP_NAME.getMessage(), telegramClient);
+    //     exit = true;
+    // }
 
     public void fnCreateGroup() {
         if (!requestText.startsWith(BotLabels.NEW_GROUP_PREFIX.getLabel()) || exit)
@@ -1491,22 +1492,22 @@ public class BotActions{
         exit = true;
     }
 
-    public void fnLLM(){
-        logger.info("Calling LLM");
-        if (!(requestText.contains(BotCommands.LLM_REQ.getCommand())) || exit)
-            return;
+    // public void fnLLM(){
+    //     logger.info("Calling LLM");
+    //     if (!(requestText.contains(BotCommands.LLM_REQ.getCommand())) || exit)
+    //         return;
         
-        String prompt = "Dame los datos del clima en mty";
-        String out = "<empty>";
-        try{
-            out = deepSeekService.generateText(prompt);
-        }catch(Exception exc){
+    //     String prompt = "Dame los datos del clima en mty";
+    //     String out = "<empty>";
+    //     try{
+    //         out = deepSeekService.generateText(prompt);
+    //     }catch(Exception exc){
 
-        }
+    //     }
 
-        BotHelper.sendMessageToTelegram(chatId, "LLM: "+out, telegramClient, null);
+    //     BotHelper.sendMessageToTelegram(chatId, "LLM: "+out, telegramClient, null);
 
-    }
+    // }
 
 
 }
