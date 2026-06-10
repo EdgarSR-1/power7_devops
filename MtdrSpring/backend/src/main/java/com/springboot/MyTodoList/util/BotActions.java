@@ -374,15 +374,44 @@ public class BotActions{
         return ReplyKeyboardMarkup
                 .builder()
                 .keyboardRow(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(), BotLabels.ADD_NEW_ITEM.getLabel()))
-                .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel())) //, BotLabels.CREATE_GROUP.getLabel()
+                .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel()))
                 .keyboardRow(new KeyboardRow(BotLabels.LIST_SPRINT_TASKS.getLabel(), BotLabels.LIST_SPRINTS.getLabel()))
                 .keyboardRow(new KeyboardRow(BotLabels.CREATE_SPRINT.getLabel()))
+                .keyboardRow(new KeyboardRow(BotLabels.SWITCH_USER.getLabel()))  // ← nueva fila
                 .keyboardRow(new KeyboardRow(BotLabels.SHOW_MAIN_SCREEN.getLabel(), BotLabels.HIDE_MAIN_SCREEN.getLabel()))
                 .build();
     }
 
     private void sendMessageWithMainMenu(String message) {
         BotHelper.sendMessageToTelegram(chatId, message, telegramClient, buildMainMenuKeyboard());
+    }
+
+    private String taskMutationErrorMessage(Exception e) {
+        String message = e != null ? e.getMessage() : null;
+        if (message == null || message.isBlank()) {
+            return "No se pudo modificar la tarea.";
+        }
+
+        switch (message) {
+            case "You can only modify tasks assigned to you":
+                return "No puedes modificar esta tarea porque no esta asignada a ti.";
+            case "You do not have access to this task":
+                return "No tienes acceso a esta tarea.";
+            case "You do not have access to this group":
+                return "No tienes acceso al grupo de esta tarea.";
+            case "Task not found":
+                return BotMessages.TASK_NOT_FOUND.getMessage();
+            case "Sprint not found":
+                return "Sprint no encontrado. Verifica el ID del sprint.";
+            case "Unauthorized":
+                return "No hay una sesion valida. Usa /login email@ejemplo.com password.";
+            default:
+                return "No se pudo modificar la tarea: " + message;
+        }
+    }
+
+    private void sendTaskMutationError(Exception e) {
+        sendMessageWithMainMenu(taskMutationErrorMessage(e));
     }
 
     private void sendSprintTasksSummary(Sprint sprint, List<Task> sprintTasks) {
@@ -559,7 +588,32 @@ public class BotActions{
         BotHelper.sendMessageToTelegram(chatId, titleMessage + buildGroupStatusSummary(groupTasks), telegramClient, keyboardMarkup);
     }
 
-
+    public void fnSwitchUser() {
+        if (exit || requestText == null) return;
+        
+        String normalized = requestText.trim();
+        if (!normalized.equalsIgnoreCase(BotCommands.SWITCH_USER.getCommand())
+                && !normalized.equals(BotLabels.SWITCH_USER.getLabel())) {
+            return;
+        }
+        
+        boolean unlinked = userService.unlinkTelegram(telegramUserId);
+        
+        if (unlinked) {
+            BotHelper.sendMessageToTelegram(chatId,
+                "Sesión cerrada. Tu cuenta de Telegram ha sido desvinculada.\n\n"
+                + "Para usar el bot con otra cuenta, regístrate con:\n"
+                + "/registeruser Nombre email@ejemplo.com password telefono",
+                telegramClient);
+        } else {
+            BotHelper.sendMessageToTelegram(chatId,
+                "No hay ninguna sesión activa. Regístrate con:\n"
+                + "/registeruser Nombre email@ejemplo.com password telefono",
+                telegramClient);
+        }
+        
+        exit = true;
+    }
     
 
     public void fnStart() {
@@ -711,6 +765,7 @@ public class BotActions{
             sendMessageWithMainMenu("Escribe la cantidad de horas dedicadas a la tarea : #" + taskId + ".");
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
+            sendTaskMutationError(e);
         }
         exit = true;
     }
@@ -734,6 +789,7 @@ public class BotActions{
             }
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
+            sendTaskMutationError(e);
         }
         exit = true;
     }
@@ -757,6 +813,7 @@ public class BotActions{
             }
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
+            sendTaskMutationError(e);
         }
         exit = true;
     }
@@ -951,6 +1008,49 @@ public class BotActions{
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
             sendMessageWithMainMenu(BotMessages.NO_SPRINTS_FOUND.getMessage());
+        }
+
+        exit = true;
+    }
+
+    public void fnLogin() {
+        if (requestText == null || exit) {
+            return;
+        }
+
+        String normalizedRequest = requestText.trim();
+        String normalizedLower = normalizedRequest.toLowerCase();
+        if (!(normalizedLower.startsWith(BotCommands.LOGIN.getCommand())
+                || normalizedLower.startsWith(BotCommands.LOGIN.getCommand().substring(1)))) {
+            return;
+        }
+
+        String payload = normalizedRequest.replaceFirst("(?i)^/?login(?:@\\w+)?\\s*", "");
+        if (payload.isBlank()) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_LOGIN_DATA.getMessage(), telegramClient);
+            exit = true;
+            return;
+        }
+
+        String[] parts = payload.split("\\s+", 2);
+        if (parts.length < 2 || parts[0].isBlank() || parts[1].isBlank()) {
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_LOGIN_DATA.getMessage(), telegramClient);
+            exit = true;
+            return;
+        }
+
+        try {
+            userService.loginTelegramByEmailPassword(parts[0], parts[1], telegramUserId, chatId);
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.LOGIN_SUCCESS.getMessage(), telegramClient, buildMainMenuKeyboard());
+        } catch (RuntimeException e) {
+            logger.error(e.getLocalizedMessage(), e);
+            String message = "Telegram account already linked".equals(e.getMessage())
+                    ? BotMessages.LOGIN_ALREADY_LINKED.getMessage()
+                    : BotMessages.LOGIN_INVALID.getMessage();
+            BotHelper.sendMessageToTelegram(chatId, message, telegramClient);
+        } catch (Exception e) {
+            logger.error(e.getLocalizedMessage(), e);
+            BotHelper.sendMessageToTelegram(chatId, BotMessages.LOGIN_INVALID.getMessage(), telegramClient);
         }
 
         exit = true;
@@ -1324,7 +1424,7 @@ public class BotActions{
                 }
             } catch (Exception e) {
                 logger.error(e.getLocalizedMessage(), e);
-                sendMessageWithMainMenu(BotMessages.TASK_SPRINT_NOT_FOUND.getMessage());
+                sendTaskMutationError(e);
             }
 
             exit = true;
@@ -1378,7 +1478,7 @@ public class BotActions{
             sendMessageWithMainMenu(message);
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
-            sendMessageWithMainMenu(BotMessages.TASK_SPRINT_NOT_FOUND.getMessage());
+            sendTaskMutationError(e);
         }
 
         exit = true;
@@ -1411,7 +1511,7 @@ public class BotActions{
             sendMessageWithMainMenu(message);
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
-            sendMessageWithMainMenu("ERROR: " + e.getMessage());
+            sendTaskMutationError(e);
         }
         exit = true;
     }
@@ -1449,7 +1549,7 @@ public class BotActions{
                 }
             } catch (Exception e) {
                 logger.error(e.getLocalizedMessage(), e);
-                sendMessageWithMainMenu("ERROR: " + e.getMessage());
+                sendTaskMutationError(e);
             }
 
             exit = true;
@@ -1499,7 +1599,7 @@ public class BotActions{
             sendMessageWithMainMenu(message);
         } catch (Exception e) {
             logger.error(e.getLocalizedMessage(), e);
-            sendMessageWithMainMenu("ERROR: " + e.getMessage());
+            sendTaskMutationError(e);
         }
         exit = true;
     }

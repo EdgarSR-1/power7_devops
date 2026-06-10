@@ -3,13 +3,17 @@ package com.springboot.MyTodoList.util;
 public enum BotMessages {
 	
 	HELLO_MYTODO_BOT(
-	"Hola! Soy PowerSeven Bot!\n Escribe una nueva tarea abajo y presiona el botón de enviar (flecha azul), o selecciona una opción de las siguientes:"),
+		"Hola! Soy PowerSeven Bot!\n Escribe una nueva tarea abajo y presiona el botón de enviar (flecha azul), o selecciona una opción de las siguientes:"),
 	BOT_REGISTERED_STARTED("Bot registrado y iniciado correctamente!"),
+	TYPE_LOGIN_DATA("Escribe tus datos asi: /login email@ejemplo.com password"),
+	LOGIN_SUCCESS("Sesion iniciada correctamente! Escribe /start para ir a la pantalla principal."),
+	LOGIN_INVALID("Correo o contraseña incorrectos."),
+	LOGIN_ALREADY_LINKED("Ese usuario ya esta vinculado a otra cuenta de Telegram. Primero desvinculalo o pide a un admin que limpie TELEGRAM_USER_ID."),
 	TYPE_NEW_USER_DATA("Escribe los datos del usuario asi: /registeruser Nombre email@ejemplo.com password telefono"),
 	NEW_USER_ADDED("Usuario creado exitosamente! Escribe /start para ir a la pantalla principal."),
 	USER_ALREADY_EXISTS("Un usuario con ese correo electrónico ya existe."),
 	INVALID_USER_DATA("Formato inválido. Usa /registeruser Nombre email@ejemplo.com password telefono"),
-	USER_NOT_REGISTERED("Acceso denegado. Tu cuenta de Telegram no está registrada. Usa /registeruser Nombre email@ejemplo.com password telefono o comparte tu contacto."),
+	USER_NOT_REGISTERED("Acceso denegado. Tu cuenta de Telegram no está registrada. Usa /login email@ejemplo.com password, /registeruser Nombre email@ejemplo.com password telefono o comparte tu contacto."),
 	ROLE_DEVELOPER("Autenticado como DEVELOPER. Tienes permisos elevados."),
 	ROLE_NORMAL("Autenticado como usuario NORMAL."),
 	ITEM_DONE("Tarea completada! Escribe /todolist para regresar a la lista de tareas, o /start para ir a la pantalla principal."), 
