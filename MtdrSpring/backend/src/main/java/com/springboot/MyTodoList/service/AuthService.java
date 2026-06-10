@@ -7,7 +7,6 @@ import com.springboot.MyTodoList.model.User;
 import com.springboot.MyTodoList.dto.CurrentUserDTO;
 import com.springboot.MyTodoList.repository.UserRepository;
 import com.springboot.MyTodoList.security.JwtService;
-import com.springboot.MyTodoList.service.UserService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 

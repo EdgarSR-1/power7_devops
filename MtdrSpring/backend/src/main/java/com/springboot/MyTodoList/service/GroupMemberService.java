@@ -11,7 +11,6 @@ import com.springboot.MyTodoList.repository.UserRepository;
 import com.springboot.MyTodoList.model.RoleName;
 import org.springframework.stereotype.Service;
 import com.springboot.MyTodoList.dto.GroupMemberResponseDTO;
-import java.util.stream.Collectors;
 
 import java.time.LocalDateTime;
 import java.util.List;

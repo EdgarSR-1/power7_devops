@@ -37,7 +37,7 @@ import org.telegram.telegrambots.meta.generics.TelegramClient;
 
 public class BotActions{
 
-    private static final Logger logger = LoggerFactory.getLogger(BotActions.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BotActions.class);
     private static final String GROUP_SELECTION_PREFIX = "GROUP::";
     private static final String TASK_DONE_PREFIX = "TASKDONE::";
     private static final String TASK_UNDO_PREFIX = "TASKUNDO::";
@@ -67,14 +67,14 @@ public class BotActions{
                         "^/?start(?:@\\w+)?\\s+-d\\s*$",
                     Pattern.CASE_INSENSITIVE
     );
-    private static final Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
-    private static final Map<Long, String> pendingTaskTitleByChat = new ConcurrentHashMap<>();
-    private static final Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
-    private static final Map<Long, Long> pendingMoveSprintTaskByChat = new ConcurrentHashMap<>();
-	private static final Map<Long, Boolean> pendingCreateSprintByChat = new ConcurrentHashMap<>();
-    private static final Map<Long, Long> pendingCompleteTaskByChat = new ConcurrentHashMap<>();
-    private static final Map<Long, Map<String, String>> groupSelectionButtonsByChat = new ConcurrentHashMap<>();
-    private static final Map<Long, Map<String, String>> taskActionButtonsByChat = new ConcurrentHashMap<>();
+    private static Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
+    private static Map<Long, String> pendingTaskTitleByChat = new ConcurrentHashMap<>();
+    private static Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
+    private static Map<Long, Long> pendingMoveSprintTaskByChat = new ConcurrentHashMap<>();
+    private static Map<Long, Boolean> pendingCreateSprintByChat = new ConcurrentHashMap<>();
+    private static Map<Long, Long> pendingCompleteTaskByChat = new ConcurrentHashMap<>();
+    private static Map<Long, Map<String, String>> groupSelectionButtonsByChat = new ConcurrentHashMap<>();
+    private static Map<Long, Map<String, String>> taskActionButtonsByChat = new ConcurrentHashMap<>();
 
     String requestText;
     long chatId;
@@ -716,7 +716,7 @@ public class BotActions{
 
             BotHelper.sendMessageToTelegram(chatId, BotMessages.NEW_GROUP_ADDED.getMessage(), telegramClient);
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             BotHelper.sendMessageToTelegram(chatId, "No se pudo crear el grupo", telegramClient);
         }
 
@@ -771,7 +771,7 @@ public class BotActions{
 
             renderGroupTasksMenu(groupId, "Tareas del grupo");
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             BotHelper.sendMessageToTelegram(chatId, "No se pudieron cargar las tareas para este grupo", telegramClient);
         }
 
@@ -791,7 +791,7 @@ public class BotActions{
             registerPendingCompleteTask(taskId);
             sendMessageWithMainMenu("Escribe la cantidad de horas dedicadas a la tarea : #" + taskId + ".");
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             sendTaskMutationError(e);
         }
         exit = true;
@@ -815,7 +815,7 @@ public class BotActions{
                 renderAllTasksMenu("Tarea iniciada!");
             }
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             sendTaskMutationError(e);
         }
         exit = true;
@@ -839,7 +839,7 @@ public class BotActions{
                 renderAllTasksMenu(BotMessages.ITEM_UNDONE.getMessage());
             }
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             sendTaskMutationError(e);
         }
         exit = true;
@@ -863,7 +863,7 @@ public class BotActions{
                 renderAllTasksMenu(BotMessages.ITEM_DELETED.getMessage());
             }
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
         }
         exit = true;
     }
@@ -883,7 +883,7 @@ public class BotActions{
             BotHelper.sendMessageToTelegram(chatId, BotMessages.ITEM_DONE.getMessage(), telegramClient);
 
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
         }
         exit = true;
     }
@@ -904,7 +904,7 @@ public class BotActions{
             BotHelper.sendMessageToTelegram(chatId, BotMessages.ITEM_UNDONE.getMessage(), telegramClient);
 
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
         }
         exit = true;
     }
@@ -922,7 +922,7 @@ public class BotActions{
             BotHelper.sendMessageToTelegram(chatId, BotMessages.ITEM_DELETED.getMessage(), telegramClient);
 
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
         }
         exit = true;
     }
@@ -990,7 +990,7 @@ public class BotActions{
         } catch (RuntimeException ex) {
             sendMessageWithMainMenu(ex.getMessage());
         } catch (Exception ex) {
-            logger.error(ex.getLocalizedMessage(), ex);
+            LOGGER.error(ex.getLocalizedMessage(), ex);
             sendMessageWithMainMenu(BotMessages.SPRINT_TASKS_FORMAT.getMessage());
         }
 
@@ -1033,7 +1033,7 @@ public class BotActions{
 
             sendMessageWithMainMenu(summary.toString());
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             sendMessageWithMainMenu(BotMessages.NO_SPRINTS_FOUND.getMessage());
         }
 
@@ -1070,13 +1070,13 @@ public class BotActions{
             userService.loginTelegramByEmailPassword(parts[0], parts[1], telegramUserId, chatId);
             BotHelper.sendMessageToTelegram(chatId, BotMessages.LOGIN_SUCCESS.getMessage(), telegramClient, buildMainMenuKeyboard());
         } catch (RuntimeException e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             String message = "Telegram account already linked".equals(e.getMessage())
                     ? BotMessages.LOGIN_ALREADY_LINKED.getMessage()
                     : BotMessages.LOGIN_INVALID.getMessage();
             BotHelper.sendMessageToTelegram(chatId, message, telegramClient);
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             BotHelper.sendMessageToTelegram(chatId, BotMessages.LOGIN_INVALID.getMessage(), telegramClient);
         }
 
@@ -1210,13 +1210,13 @@ public class BotActions{
             userService.createUser(user);
             BotHelper.sendMessageToTelegram(chatId, BotMessages.NEW_USER_ADDED.getMessage(), telegramClient);
         } catch (RuntimeException e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             String message = "Email already exists".equals(e.getMessage())
                     ? BotMessages.USER_ALREADY_EXISTS.getMessage()
                     : e.getMessage();
             BotHelper.sendMessageToTelegram(chatId, message, telegramClient);
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             BotHelper.sendMessageToTelegram(chatId, BotMessages.INVALID_USER_DATA.getMessage(), telegramClient);
         }
 
@@ -1224,7 +1224,7 @@ public class BotActions{
     }
 
     public void fnAddItem(){
-        logger.info("Adding item");
+        LOGGER.info("Adding item");
 		if (!(requestText.contains(BotCommands.ADD_ITEM.getCommand())
 				|| requestText.contains(BotLabels.ADD_NEW_ITEM.getLabel())) || exit )
             return;
@@ -1268,7 +1268,7 @@ public class BotActions{
             pendingTaskGroupByChat.put(chatId, groupId);
             BotHelper.sendMessageToTelegram(chatId, BotMessages.TYPE_NEW_TASK_TITLE.getMessage(), telegramClient);
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             BotHelper.sendMessageToTelegram(chatId, BotMessages.SELECT_GROUP_FOR_NEW_TASK.getMessage(), telegramClient);
         }
 
@@ -1316,7 +1316,7 @@ public class BotActions{
                 return;
             }
 
-            logger.info(
+            LOGGER.info(
                 "Creating task. groupId={} userId={} title={} hours={}",
                 selectedGroupId,
                 requesterUser.getId(),
@@ -1334,7 +1334,7 @@ public class BotActions{
             pendingTaskTitleByChat.remove(chatId);
             renderGroupTasksMenu(selectedGroupId, BotMessages.NEW_ITEM_ADDED.getMessage());
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             BotHelper.sendMessageToTelegram(chatId, "No se pudo crear la tarea en el grupo seleccionado.", telegramClient);
         }
 
@@ -1436,7 +1436,7 @@ public class BotActions{
                 sendMessageWithMainMenu(message);
             }
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             sendMessageWithMainMenu("No se pudo crear la tarea: " + e.getMessage());
         }
         exit = true;
@@ -1463,7 +1463,7 @@ public class BotActions{
                     renderAllTasksMenu(message);
                 }
             } catch (Exception e) {
-                logger.error(e.getLocalizedMessage(), e);
+                LOGGER.error(e.getLocalizedMessage(), e);
                 sendTaskMutationError(e);
             }
 
@@ -1478,7 +1478,7 @@ public class BotActions{
                 registerPendingMoveSprintTask(taskId);
                 sendMessageWithMainMenu(BotMessages.MOVE_SPRINT_PROMPT.getMessage() + " Tarea #" + taskId + ".");
             } catch (Exception e) {
-                logger.error(e.getLocalizedMessage(), e);
+                LOGGER.error(e.getLocalizedMessage(), e);
                 sendMessageWithMainMenu(BotMessages.MOVE_SPRINT_FORMAT.getMessage());
             }
 
@@ -1517,7 +1517,7 @@ public class BotActions{
             String message = String.format(BotMessages.TASK_SPRINT_CHANGED.getMessage(), taskId, sprintId);
             sendMessageWithMainMenu(message);
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             sendTaskMutationError(e);
         }
 
@@ -1550,7 +1550,7 @@ public class BotActions{
             String message = String.format(BotMessages.TASK_STARTED.getMessage(), taskId);
             sendMessageWithMainMenu(message);
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             sendTaskMutationError(e);
         }
         exit = true;
@@ -1571,7 +1571,7 @@ public class BotActions{
                     exit = true;
                     return;
                 }
-                logger.info(
+                LOGGER.info(
                     "Completing task {} requesterUser={} requesterId={}",
                     pendingTaskId,
                     requesterUser.getName(),
@@ -1588,7 +1588,7 @@ public class BotActions{
                     renderAllTasksMenu(message);
                 }
             } catch (Exception e) {
-                logger.error(e.getLocalizedMessage(), e);
+                LOGGER.error(e.getLocalizedMessage(), e);
                 sendTaskMutationError(e);
             }
 
@@ -1638,14 +1638,14 @@ public class BotActions{
             String message = String.format(BotMessages.TASK_COMPLETED.getMessage(), taskId, actualHours);
             sendMessageWithMainMenu(message);
         } catch (Exception e) {
-            logger.error(e.getLocalizedMessage(), e);
+            LOGGER.error(e.getLocalizedMessage(), e);
             sendTaskMutationError(e);
         }
         exit = true;
     }
 
     public void fnLLM(){
-        logger.info("Calling LLM");
+        LOGGER.info("Calling LLM");
         if (!(requestText.contains(BotCommands.LLM_REQ.getCommand())) || exit)
             return;
         
