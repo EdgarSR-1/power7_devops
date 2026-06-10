@@ -90,9 +90,24 @@ spec:
             - name: ui_password
               valueFrom:
                 secretKeyRef:
-                  name: frontendadmin
-                  key: password
-                  optional: true
+                  name: telegram-secret
+                  key: TELEGRAM_BOT_TOKEN
+            - name: GOOGLE_GENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: google-genai-secret
+                  key: GOOGLE_GENAI_API_KEY
+            - name: GOOGLE_GENAI_EMBEDDING_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: google-genai-secret
+                  key: GOOGLE_GENAI_EMBEDDING_API_KEY
+                        - name: ui_password
+                          valueFrom:
+                            secretKeyRef:
+                              name: frontendadmin
+                              key: password
+                              optional: true
           # [P7-DBG] backend bootstrap trace in pod logs
           lifecycle:
             postStart:

@@ -43,6 +43,22 @@ public class TaskGroupService {
         return repository.findAll();
     }
 
+    public List<TaskGroup> findGroupsForUser(User user) {
+        if (user == null) return java.util.Collections.emptyList();
+        
+        // SUPERADMIN ve todos los grupos
+        if (user.getRole() != null 
+                && user.getRole().getName() == com.springboot.MyTodoList.model.RoleName.SUPERADMIN) {
+            return repository.findAll();
+        }
+        
+        // Los demás solo ven los grupos donde tienen membresía
+        return groupMemberRepository.findByUserId(user.getId())
+                .stream()
+                .map(gm -> gm.getGroup())
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     public TaskGroup save(TaskGroup group) {
         if (group.getName() == null || group.getName().trim().isEmpty()) {
             throw new IllegalArgumentException("Group name is required");

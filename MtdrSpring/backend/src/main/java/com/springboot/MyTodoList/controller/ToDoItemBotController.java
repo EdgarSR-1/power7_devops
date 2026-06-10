@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 @Component
 public class ToDoItemBotController  implements SpringLongPollingBot, LongPollingSingleThreadUpdateConsumer {
 	private static final Pattern REGISTER_USER_COMMAND_PATTERN = Pattern.compile("^/?registeruser(?:@\\w+)?(?:\\s+.*)?$", Pattern.CASE_INSENSITIVE);
+	private static final Pattern LOGIN_COMMAND_PATTERN = Pattern.compile("^/?login(?:@\\w+)?(?:\\s+.*)?$", Pattern.CASE_INSENSITIVE);
 	private static final Pattern START_COMMAND_PATTERN = Pattern.compile("^/?start(?:@\\w+)?(?:\\s+-d)?\\s*$", Pattern.CASE_INSENSITIVE);
 
 	private static final Logger logger = LoggerFactory.getLogger(ToDoItemBotController.class);
@@ -88,8 +89,8 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 			);
 
 			String linkMessage = linked
-					? "Phone linked with your Telegram account successfully."
-					: "Could not find a user with this phone. Register first with /registeruser Name email@example.com password phone";
+					? "Telefono vinculado con tu cuenta de Telegram. Escribe /start para abrir el menu principal."
+					: "No encontre un usuario con ese telefono. Usa /login email@ejemplo.com password o crea una cuenta con /registeruser Nombre email@ejemplo.com password telefono.";
 			BotHelper.sendMessageToTelegram(chatId, linkMessage, telegramClient);
 		}
 
@@ -102,6 +103,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 
 		Optional<com.springboot.MyTodoList.model.User> requesterUser = userService.findByTelegramUserId(telegramUserId);
 		boolean isRegisterFlow = REGISTER_USER_COMMAND_PATTERN.matcher(normalizedRequest).matches();
+		boolean isLoginFlow = LOGIN_COMMAND_PATTERN.matcher(normalizedRequest).matches();
 		boolean isStartFlow = START_COMMAND_PATTERN.matcher(normalizedRequest).matches();
 
 		logger.info("bot_request chatId={} telegramUserId={} text='{}' requesterFound={}",
@@ -110,7 +112,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 				normalizedRequest,
 				requesterUser.isPresent());
 
-		if (requesterUser.isEmpty() && !isRegisterFlow && !isStartFlow) {
+		if (requesterUser.isEmpty() && !isRegisterFlow && !isLoginFlow && !isStartFlow) {
 			BotHelper.sendMessageToTelegram(chatId, BotMessages.USER_NOT_REGISTERED.getMessage(), telegramClient);
 			return;
 		}
@@ -125,7 +127,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 			actions.setTodoService(toDoItemService);
 		}
 
-
+		actions.fnSwitchUser();
 		actions.fnStart();
 		actions.fnDone();
 		actions.fnUndo();
@@ -134,6 +136,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 		actions.fnListAll();
 		actions.fnListSprints();
 		actions.fnSprintTasks();
+		actions.fnLogin();
 		actions.fnRegisterUser();
 		actions.fnAddTask();
 		actions.fnMoveSprint();

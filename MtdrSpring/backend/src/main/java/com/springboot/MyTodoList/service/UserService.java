@@ -81,8 +81,30 @@ public class UserService {
             }
         }
 
-        if (repo.existsByEmail(email)) {
-            throw new RuntimeException("Email already exists");
+        // Caso: el telegramUserId no está en BD y el teléfono tampoco,
+        // pero el email sí existe → vincular Telegram a ese usuario existente
+        Optional<User> existingByEmail = repo.findByEmail(email);
+        if (existingByEmail.isPresent()) {
+            User existing = existingByEmail.get();
+
+            // Si ese usuario ya tiene otro Telegram vinculado, rechazar
+            if (existing.getTelegramUserId() != null
+                    && !existing.getTelegramUserId().equals(telegramUserId)) {
+                throw new RuntimeException(
+                    "Este usuario ya está vinculado a otra cuenta de Telegram");
+            }
+
+            // Vincular tu Telegram a este usuario existente
+            existing.setTelegramUserId(telegramUserId);
+            existing.setTelegramChatId(telegramChatId);
+            // Actualizar teléfono si el usuario no tenía
+            if (existing.getPhone() == null || existing.getPhone().isBlank()) {
+                existing.setPhone(phone);
+            }
+            if (existing.getRole() == null) {
+                existing.setRole(defaultRole);
+            }
+            return repo.save(existing);
         }
 
         user.setName(name);
@@ -111,6 +133,38 @@ public class UserService {
             return Optional.empty();
         }
         return repo.findByTelegramUserId(telegramUserId);
+    }
+
+    public User loginTelegramByEmailPassword(String rawEmail, String rawPassword, Long telegramUserId, Long telegramChatId) {
+        if (telegramUserId == null) {
+            throw new RuntimeException("Telegram identity is required");
+        }
+
+        String email = normalizeRequired(rawEmail, "Email is required").toLowerCase(Locale.ROOT);
+        String password = normalizeRequired(rawPassword, "Password is required");
+
+        User user = repo.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new RuntimeException("Invalid credentials");
+        }
+
+        if (user.getTelegramUserId() != null && !user.getTelegramUserId().equals(telegramUserId)) {
+            throw new RuntimeException("Telegram account already linked");
+        }
+
+        Optional<User> existingTelegramUser = repo.findByTelegramUserId(telegramUserId);
+        if (existingTelegramUser.isPresent() && !existingTelegramUser.get().getId().equals(user.getId())) {
+            User previousUser = existingTelegramUser.get();
+            previousUser.setTelegramUserId(null);
+            previousUser.setTelegramChatId(null);
+            repo.save(previousUser);
+        }
+
+        user.setTelegramUserId(telegramUserId);
+        user.setTelegramChatId(telegramChatId);
+        return repo.save(user);
     }
 
     public boolean linkTelegramIdentityByPhone(Long telegramUserId, Long telegramChatId, String rawPhone) {
@@ -194,5 +248,18 @@ public class UserService {
         }
 
         return passwordEncoder.encode(password);
+    }
+
+    public boolean unlinkTelegram(Long telegramUserId) {
+        if (telegramUserId == null) return false;
+        
+        Optional<User> existing = repo.findByTelegramUserId(telegramUserId);
+        if (existing.isEmpty()) return false;
+        
+        User user = existing.get();
+        user.setTelegramUserId(null);
+        user.setTelegramChatId(null);
+        repo.save(user);
+        return true;
     }
 }

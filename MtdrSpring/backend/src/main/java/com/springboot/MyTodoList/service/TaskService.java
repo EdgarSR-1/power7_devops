@@ -443,6 +443,7 @@ private TaskStatus parseTaskStatusForAi(String status) {
     }
 
   private void validateTaskEditAccess(User currentUser, Task task) {
+
     if (currentUser == null) {
         throw new RuntimeException("Unauthorized");
     }
@@ -476,6 +477,8 @@ private TaskStatus parseTaskStatusForAi(String status) {
 
         return;
     }
+
+    
 
     throw new RuntimeException("Unauthorized");
     }

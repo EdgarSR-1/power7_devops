@@ -5,6 +5,7 @@ public enum BotCommands {
 	START_COMMAND("/start"), 
 	HIDE_COMMAND("/hide"), 
 	TODO_LIST("/todolist"),
+	LOGIN("/login"),
 	REGISTER_USER("/registeruser"),
 	ADD_ITEM("/additem"),
 	ADD_TASK("/addtask"),
@@ -13,7 +14,8 @@ public enum BotCommands {
 	SPRINT_TASKS("/sprinttasks"),
 	START_TASK("/starttask"),
 	COMPLETE_TASK("/completetask"),
-	LLM_REQ("/llm");
+	LLM_REQ("/llm"),
+	SWITCH_USER("/switchuser");
 
 	private String command;
 
