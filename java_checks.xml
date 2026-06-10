@@ -8,6 +8,8 @@
 
     <module name="TreeWalker">
         <module name="AvoidStarImport"/>
-        <module name="ConstantName"/>
+        <module name="ConstantName">
+            <property name="applyToFinalMembers" value="false"/>
+        </module>
     </module>
 </module>
