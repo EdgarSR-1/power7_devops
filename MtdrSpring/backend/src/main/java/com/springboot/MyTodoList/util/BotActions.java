@@ -15,6 +15,8 @@ import com.springboot.MyTodoList.service.TaskService;
 import com.springboot.MyTodoList.service.ToDoItemService;
 import com.springboot.MyTodoList.service.UserService;
 import java.time.format.DateTimeParseException;
+import java.time.LocalDate;
+import com.springboot.MyTodoList.dto.SprintRequestDTO;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -42,6 +44,9 @@ public class BotActions{
     private static final String TASK_DELETE_PREFIX = "TASKDEL::";
     private static final String TASK_START_PREFIX = "TASKSTART::";
     private static final String TASK_MOVE_PREFIX = "TASKMOVE::";
+	private static final DateTimeFormatter DATE_TIME_ISO_MINUTES_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+	private static final DateTimeFormatter DATE_TIME_SLASH_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+	private static final DateTimeFormatter DATE_ONLY_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final float MAX_ESTIMATED_HOURS_PER_TASK = 4f;
     private static final int MAX_SPLIT_TASKS = 100;
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -49,6 +54,11 @@ public class BotActions{
                 "^/?registeruser(?:@\\w+)?\\s+(.+?)\\s+([^\\s]+)\\s+([^\\s]+)\\s+([^\\s]+)\\s*$",
             Pattern.CASE_INSENSITIVE
         );
+		private static final Pattern CREATE_SPRINT_COMMAND_PATTERN = Pattern.compile(
+		        "^/?createsprint(?:@\\w+)?(?:\\s+.*)?$",
+		        Pattern.CASE_INSENSITIVE
+		);
+	
         private static final Pattern REGISTER_USER_HELP_PATTERN = Pattern.compile(
                 "^/?registeruser(?:@\\w+)?\\s*$",
             Pattern.CASE_INSENSITIVE
@@ -222,6 +232,21 @@ public class BotActions{
 	    } else {
 	        pendingCreateSprintByChat.remove(chatId);
 	    }
+	}
+
+	private LocalDateTime parseSprintDateTime(String rawValue, boolean isEndDate) {
+	    String value = rawValue != null ? rawValue.trim() : "";
+	    if (value.isEmpty()) {
+	        throw new DateTimeParseException("Empty date", value, 0);
+	    }
+	    for (DateTimeFormatter formatter : new DateTimeFormatter[]{
+	            DATE_TIME_FORMATTER, DATE_TIME_ISO_MINUTES_FORMATTER, DATE_TIME_SLASH_FORMATTER}) {
+	        try {
+	            return LocalDateTime.parse(value, formatter);
+	        } catch (DateTimeParseException ignored) {}
+	    }
+	    LocalDate parsedDate = LocalDate.parse(value, DATE_ONLY_FORMATTER);
+	    return isEndDate ? parsedDate.atTime(23, 59) : parsedDate.atStartOfDay();
 	}
 
     private String statusTag(TaskStatus status) {
