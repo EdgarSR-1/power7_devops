@@ -46,7 +46,7 @@ public enum BotMessages {
 	TASK_COMPLETED("Tarea %s marcada como COMPLETED! Tiempo registrado: %s horas"),
 	TASK_NOT_FOUND("Tarea no encontrada. Verifica el ID de la tarea."),
 	INVALID_HOURS("Formato de horas inválido. Usa decimal (e.g., 2.5)"),
-	BYE("¡Hasta luego! Selecciona /start para reanudar.");
+	BYE("¡Hasta luego! Selecciona /start para reanudar."),
 	ESTIMATED_HOURS_TOO_LARGE("Las horas estimadas son demasiado grandes. El máximo permitido es 40h.");
 
 	private String message;
