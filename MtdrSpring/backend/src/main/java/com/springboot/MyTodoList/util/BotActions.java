@@ -14,6 +14,7 @@ import com.springboot.MyTodoList.service.TaskGroupService;
 import com.springboot.MyTodoList.service.TaskService;
 import com.springboot.MyTodoList.service.ToDoItemService;
 import com.springboot.MyTodoList.service.UserService;
+import java.time.format.DateTimeParseException;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -60,6 +61,7 @@ public class BotActions{
     private static final Map<Long, String> pendingTaskTitleByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> pendingMoveSprintTaskByChat = new ConcurrentHashMap<>();
+	private static final Map<Long, Boolean> pendingCreateSprintByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Long> pendingCompleteTaskByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Map<String, String>> groupSelectionButtonsByChat = new ConcurrentHashMap<>();
     private static final Map<Long, Map<String, String>> taskActionButtonsByChat = new ConcurrentHashMap<>();
@@ -209,6 +211,18 @@ public class BotActions{
     private void clearPendingCompleteTask() {
         pendingCompleteTaskByChat.remove(chatId);
     }
+
+	private boolean isPendingCreateSprint() {
+	    return pendingCreateSprintByChat.containsKey(chatId);
+	}
+	
+	private void setPendingCreateSprint(boolean pending) {
+	    if (pending) {
+	        pendingCreateSprintByChat.put(chatId, Boolean.TRUE);
+	    } else {
+	        pendingCreateSprintByChat.remove(chatId);
+	    }
+	}
 
     private String statusTag(TaskStatus status) {
         if (status == null) {
