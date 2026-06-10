@@ -89,8 +89,8 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 			);
 
 			String linkMessage = linked
-					? "Phone linked with your Telegram account successfully."
-					: "Could not find a user with this phone. Register first with /registeruser Name email@example.com password phone";
+					? "Telefono vinculado con tu cuenta de Telegram. Escribe /start para abrir el menu principal."
+					: "No encontre un usuario con ese telefono. Usa /login email@ejemplo.com password o crea una cuenta con /registeruser Nombre email@ejemplo.com password telefono.";
 			BotHelper.sendMessageToTelegram(chatId, linkMessage, telegramClient);
 		}
 
@@ -165,4 +165,3 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
     }
 
 }
-

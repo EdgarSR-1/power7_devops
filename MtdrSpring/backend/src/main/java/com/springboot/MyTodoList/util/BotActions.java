@@ -8,6 +8,7 @@ import com.springboot.MyTodoList.model.TaskGroup;
 import com.springboot.MyTodoList.model.TaskStatus;
 import com.springboot.MyTodoList.model.ToDoItem;
 import com.springboot.MyTodoList.model.User;
+import com.springboot.MyTodoList.model.RoleName;
 import com.springboot.MyTodoList.service.DeepSeekService;
 import com.springboot.MyTodoList.service.SprintService;
 import com.springboot.MyTodoList.service.TaskGroupService;
@@ -370,16 +371,33 @@ public class BotActions{
         return value == null ? "-" : String.format("%.1f", value);
     }
 
+    private boolean requesterHasRole(RoleName roleName) {
+        return requesterUser != null
+                && requesterUser.getRole() != null
+                && requesterUser.getRole().getName() == roleName;
+    }
+
     private ReplyKeyboardMarkup buildMainMenuKeyboard() {
-        return ReplyKeyboardMarkup
+        ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup
                 .builder()
-                .keyboardRow(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(), BotLabels.ADD_NEW_ITEM.getLabel()))
-                .keyboardRow(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel()))
-                .keyboardRow(new KeyboardRow(BotLabels.LIST_SPRINT_TASKS.getLabel(), BotLabels.LIST_SPRINTS.getLabel()))
-                .keyboardRow(new KeyboardRow(BotLabels.CREATE_SPRINT.getLabel()))
-                .keyboardRow(new KeyboardRow(BotLabels.SWITCH_USER.getLabel()))  // ← nueva fila
-                .keyboardRow(new KeyboardRow(BotLabels.SHOW_MAIN_SCREEN.getLabel(), BotLabels.HIDE_MAIN_SCREEN.getLabel()))
+                .resizeKeyboard(true)
+                .oneTimeKeyboard(false)
+                .selective(true)
                 .build();
+
+        List<KeyboardRow> keyboard = new ArrayList<>();
+        keyboard.add(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(), BotLabels.ADD_NEW_ITEM.getLabel()));
+        keyboard.add(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel()));
+        keyboard.add(new KeyboardRow(BotLabels.LIST_SPRINT_TASKS.getLabel(), BotLabels.LIST_SPRINTS.getLabel()));
+
+        if (requesterHasRole(RoleName.SUPERADMIN)) {
+            keyboard.add(new KeyboardRow(BotLabels.CREATE_SPRINT.getLabel()));
+        }
+
+        keyboard.add(new KeyboardRow(BotLabels.SWITCH_USER.getLabel()));
+        keyboard.add(new KeyboardRow(BotLabels.SHOW_MAIN_SCREEN.getLabel(), BotLabels.HIDE_MAIN_SCREEN.getLabel()));
+        keyboardMarkup.setKeyboard(keyboard);
+        return keyboardMarkup;
     }
 
     private void sendMessageWithMainMenu(String message) {
@@ -602,13 +620,13 @@ public class BotActions{
         if (unlinked) {
             BotHelper.sendMessageToTelegram(chatId,
                 "Sesión cerrada. Tu cuenta de Telegram ha sido desvinculada.\n\n"
-                + "Para usar el bot con otra cuenta, regístrate con:\n"
-                + "/registeruser Nombre email@ejemplo.com password telefono",
+                + "Para usar el bot con otra cuenta, inicia sesión con:\n"
+                + "/login email@ejemplo.com password",
                 telegramClient);
         } else {
             BotHelper.sendMessageToTelegram(chatId,
-                "No hay ninguna sesión activa. Regístrate con:\n"
-                + "/registeruser Nombre email@ejemplo.com password telefono",
+                "No hay ninguna sesión activa. Inicia sesión con:\n"
+                + "/login email@ejemplo.com password",
                 telegramClient);
         }
         
@@ -631,7 +649,7 @@ public class BotActions{
             welcomeMessage = "Hola, " + requesterUser.getName().trim() + "!\n" + welcomeMessage;
         }
 
-        welcomeMessage += "\n\nComandos para Sprints:\n/sprints\n/createsprint name|yyyy-MM-dd HH:mm|yyyy-MM-dd HH:mm";
+        welcomeMessage += "\n\nComandos para Sprints:\n/sprints\n/sprinttasks";
 
         // String roleMessage = "";
         // String userIdText = "N/A";
