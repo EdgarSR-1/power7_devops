@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 @Import(DeepSeekConfig.class)
 public class MyTodoListApplication {
 
-	private static final Logger logger = LoggerFactory.getLogger(MyTodoListApplication.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(MyTodoListApplication.class);
 
 	public static void main(String[] args) {
 		SpringApplication.run(MyTodoListApplication.class, args);
@@ -28,7 +28,7 @@ public class MyTodoListApplication {
 		return args -> {
 			// TEMPORARY: automatic sprint seeding disabled.
 			// Keep this block commented for potential removal or controlled reactivation.
-			logger.info("Automatic sprint initialization is disabled.");
+			LOGGER.info("Automatic sprint initialization is disabled.");
 
 			/*
 			try {
@@ -36,7 +36,7 @@ public class MyTodoListApplication {
 
 				// Crear Sprint 2 si no existe
 				if (existingSprints.stream().noneMatch(s -> s.getName().equals("Sprint 2"))) {
-					logger.info("Creating Sprint 2...");
+					LOGGER.info("Creating Sprint 2...");
 					SprintRequestDTO sprint2 = new SprintRequestDTO();
 					sprint2.setName("Sprint 2");
 					sprint2.setStartDate(LocalDateTime.of(2026, 4, 22, 9, 0));
@@ -46,7 +46,7 @@ public class MyTodoListApplication {
 
 				// Crear Sprint 3 si no existe
 				if (existingSprints.stream().noneMatch(s -> s.getName().equals("Sprint 3"))) {
-					logger.info("Creating Sprint 3...");
+					LOGGER.info("Creating Sprint 3...");
 					SprintRequestDTO sprint3 = new SprintRequestDTO();
 					sprint3.setName("Sprint 3");
 					sprint3.setStartDate(LocalDateTime.of(2026, 4, 29, 9, 0));
@@ -56,7 +56,7 @@ public class MyTodoListApplication {
 
 				// Crear Sprint 4 si no existe
 				if (existingSprints.stream().noneMatch(s -> s.getName().equals("Sprint 4"))) {
-					logger.info("Creating Sprint 4...");
+					LOGGER.info("Creating Sprint 4...");
 					SprintRequestDTO sprint4 = new SprintRequestDTO();
 					sprint4.setName("Sprint 4");
 					sprint4.setStartDate(LocalDateTime.of(2026, 5, 6, 9, 0));
@@ -64,9 +64,9 @@ public class MyTodoListApplication {
 					sprintService.createSprint(sprint4);
 				}
 
-				logger.info("Sprint initialization completed.");
+				LOGGER.info("Sprint initialization completed.");
 			} catch (Exception e) {
-				logger.error("Error initializing sprints: " + e.getMessage(), e);
+				LOGGER.error("Error initializing sprints: " + e.getMessage(), e);
 			}
 			*/
 		};

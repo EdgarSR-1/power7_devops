@@ -32,7 +32,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 	private static final Pattern LOGIN_COMMAND_PATTERN = Pattern.compile("^/?login(?:@\\w+)?(?:\\s+.*)?$", Pattern.CASE_INSENSITIVE);
 	private static final Pattern START_COMMAND_PATTERN = Pattern.compile("^/?start(?:@\\w+)?(?:\\s+-d)?\\s*$", Pattern.CASE_INSENSITIVE);
 
-	private static final Logger logger = LoggerFactory.getLogger(ToDoItemBotController.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(ToDoItemBotController.class);
 	private ToDoItemService toDoItemService;
 	private DeepSeekService deepSeekService;
 	private SprintService sprintService;
@@ -106,7 +106,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 		boolean isLoginFlow = LOGIN_COMMAND_PATTERN.matcher(normalizedRequest).matches();
 		boolean isStartFlow = START_COMMAND_PATTERN.matcher(normalizedRequest).matches();
 
-		logger.info("bot_request chatId={} telegramUserId={} text='{}' requesterFound={}",
+		LOGGER.info("bot_request chatId={} telegramUserId={} text='{}' requesterFound={}",
 				chatId,
 				telegramUserId,
 				normalizedRequest,
@@ -123,7 +123,7 @@ public class ToDoItemBotController  implements SpringLongPollingBot, LongPolling
 		actions.setTelegramUserId(telegramUserId);
 		requesterUser.ifPresent(actions::setRequesterUser);
 		if(actions.getTodoService()==null){
-			logger.info("todosvc error");
+			LOGGER.info("todosvc error");
 			actions.setTodoService(toDoItemService);
 		}
 
