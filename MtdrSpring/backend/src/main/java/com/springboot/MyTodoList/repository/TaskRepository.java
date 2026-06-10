@@ -9,8 +9,6 @@ import com.springboot.MyTodoList.model.TaskPriority;
 import com.springboot.MyTodoList.model.TaskStatus;
 import org.springframework.data.domain.Pageable;
 import com.springboot.MyTodoList.dto.kpi.StatusDistributionDTO;
-import com.springboot.MyTodoList.dto.kpi.CompletedTasksByUserSprintGroupDTO;
-import com.springboot.MyTodoList.dto.kpi.HoursBySprintDTO;
 import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.List;

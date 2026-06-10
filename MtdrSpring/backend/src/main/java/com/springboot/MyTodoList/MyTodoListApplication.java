@@ -2,7 +2,6 @@ package com.springboot.MyTodoList;
 
 import com.springboot.MyTodoList.config.BotProps;
 import com.springboot.MyTodoList.config.DeepSeekConfig;
-import com.springboot.MyTodoList.dto.SprintRequestDTO;
 import com.springboot.MyTodoList.service.SprintService;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -12,7 +11,6 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.time.LocalDateTime;
 
 @SpringBootApplication
 @EnableConfigurationProperties(BotProps.class)
