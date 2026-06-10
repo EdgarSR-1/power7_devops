@@ -67,14 +67,14 @@ public class BotActions{
                         "^/?start(?:@\\w+)?\\s+-d\\s*$",
                     Pattern.CASE_INSENSITIVE
     );
-    private static final Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
-    private static final Map<Long, String> pendingTaskTitleByChat = new ConcurrentHashMap<>();
-    private static final Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
-    private static final Map<Long, Long> pendingMoveSprintTaskByChat = new ConcurrentHashMap<>();
-	private static final Map<Long, Boolean> pendingCreateSprintByChat = new ConcurrentHashMap<>();
-    private static final Map<Long, Long> pendingCompleteTaskByChat = new ConcurrentHashMap<>();
-    private static final Map<Long, Map<String, String>> groupSelectionButtonsByChat = new ConcurrentHashMap<>();
-    private static final Map<Long, Map<String, String>> taskActionButtonsByChat = new ConcurrentHashMap<>();
+    private static Map<Long, Long> pendingTaskGroupByChat = new ConcurrentHashMap<>();
+    private static Map<Long, String> pendingTaskTitleByChat = new ConcurrentHashMap<>();
+    private static Map<Long, Long> lastViewedGroupByChat = new ConcurrentHashMap<>();
+    private static Map<Long, Long> pendingMoveSprintTaskByChat = new ConcurrentHashMap<>();
+    private static Map<Long, Boolean> pendingCreateSprintByChat = new ConcurrentHashMap<>();
+    private static Map<Long, Long> pendingCompleteTaskByChat = new ConcurrentHashMap<>();
+    private static Map<Long, Map<String, String>> groupSelectionButtonsByChat = new ConcurrentHashMap<>();
+    private static Map<Long, Map<String, String>> taskActionButtonsByChat = new ConcurrentHashMap<>();
 
     String requestText;
     long chatId;
