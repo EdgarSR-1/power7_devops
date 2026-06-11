@@ -395,7 +395,7 @@ public class BotActions{
                 .build();
 
         List<KeyboardRow> keyboard = new ArrayList<>();
-        keyboard.add(new KeyboardRow(BotLabels.LIST_ALL_ITEMS.getLabel(), BotLabels.ADD_NEW_ITEM.getLabel()));
+        keyboard.add(new KeyboardRow(BotLabels.ADD_NEW_ITEM.getLabel()));
         keyboard.add(new KeyboardRow(BotLabels.LIST_GROUP_TASKS.getLabel()));
         keyboard.add(new KeyboardRow(BotLabels.LIST_SPRINT_TASKS.getLabel(), BotLabels.LIST_SPRINTS.getLabel()));
 
@@ -658,7 +658,7 @@ public class BotActions{
             welcomeMessage = "Hola, " + requesterUser.getName().trim() + "!\n" + welcomeMessage;
         }
 
-        welcomeMessage += "\n\nComandos para Sprints:\n/sprints\n/sprinttasks";
+        // welcomeMessage += "\n\nComandos para Sprints:\n/sprints\n/sprinttasks";
 
         // String roleMessage = "";
         // String userIdText = "N/A";
@@ -1449,9 +1449,13 @@ public class BotActions{
 
         Long pendingTaskId = getPendingMoveSprintTask();
         String trimmedRequest = requestText.trim();
-        if (pendingTaskId != null && trimmedRequest.matches("^\\d+$")) {
+        String sprintIdStr = trimmedRequest.matches("^\\d+$")
+                ? trimmedRequest
+                : trimmedRequest.split(" - ")[0].trim();
+
+        if (pendingTaskId != null && sprintIdStr.matches("^\\d+$")) {
             try {
-                Long sprintId = Long.valueOf(trimmedRequest);
+                Long sprintId = Long.valueOf(sprintIdStr);
                 taskService.moveTaskToSprint(pendingTaskId, sprintId, requesterUser);
                 clearPendingMoveSprintTask();
 
@@ -1476,12 +1480,39 @@ public class BotActions{
             try {
                 Long taskId = Long.valueOf(actionToken.substring(TASK_MOVE_PREFIX.length()));
                 registerPendingMoveSprintTask(taskId);
-                sendMessageWithMainMenu(BotMessages.MOVE_SPRINT_PROMPT.getMessage() + " Tarea #" + taskId + ".");
+
+                List<Sprint> sprints = sprintService.findAll();
+
+                if (sprints.isEmpty()) {
+                    sendMessageWithMainMenu("No hay sprints disponibles.");
+                } else {
+                    ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup.builder()
+                            .resizeKeyboard(true)
+                            .oneTimeKeyboard(false)
+                            .selective(true)
+                            .build();
+
+                    List<KeyboardRow> keyboard = new ArrayList<>();
+
+                    KeyboardRow topRow = new KeyboardRow();
+                    topRow.add(BotLabels.SHOW_MAIN_SCREEN.getLabel());
+                    keyboard.add(topRow);
+
+                    for (Sprint sprint : sprints) {
+                        KeyboardRow row = new KeyboardRow();
+                        row.add(sprint.getId() + " - " + sprint.getName());
+                        keyboard.add(row);
+                    }
+
+                    keyboardMarkup.setKeyboard(keyboard);
+                    String prompt = "Selecciona el sprint para la tarea #" + taskId + ":";
+                    BotHelper.sendMessageToTelegram(chatId, prompt, telegramClient, keyboardMarkup);
+                }
+
             } catch (Exception e) {
                 LOGGER.error(e.getLocalizedMessage(), e);
                 sendMessageWithMainMenu(BotMessages.MOVE_SPRINT_FORMAT.getMessage());
             }
-
             exit = true;
             return;
         }
