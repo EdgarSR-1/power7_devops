@@ -14,6 +14,7 @@ public class TaskRequestDTO {
     private Long createdById;
     private Long sprintId;
     private Float estimatedHours;
+    private Float actualHours;
 
     public TaskRequestDTO() {
     }
@@ -104,5 +105,13 @@ public class TaskRequestDTO {
 
     public void setEstimatedHours(Float estimatedHours) {
         this.estimatedHours = estimatedHours;
+    }
+
+    public Float getActualHours() {
+    return actualHours;
+    }
+
+    public void setActualHours(Float actualHours) {
+        this.actualHours = actualHours;
     }
 }

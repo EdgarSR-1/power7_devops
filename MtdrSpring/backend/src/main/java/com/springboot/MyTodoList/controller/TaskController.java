@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.Map;
@@ -55,6 +56,16 @@ public class TaskController {
     public TaskResponseDTO getTaskById(@PathVariable Long id, Authentication authentication) {
         User currentUser = getCurrentUser(authentication);
         return taskService.getTaskById(id, currentUser);
+    }
+
+    @PutMapping("/{id}")
+    public TaskResponseDTO updateTask(
+            @PathVariable Long id,
+            @RequestBody TaskRequestDTO dto,
+            Authentication authentication
+    ) {
+        User currentUser = getCurrentUser(authentication);
+        return taskService.updateTask(id, dto, currentUser);
     }
 
     @PutMapping("/{id}/status")
