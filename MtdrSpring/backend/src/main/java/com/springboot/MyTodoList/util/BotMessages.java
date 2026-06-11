@@ -3,7 +3,7 @@ package com.springboot.MyTodoList.util;
 public enum BotMessages {
 	
 	HELLO_MYTODO_BOT(
-		"Hola! Soy PowerSeven Bot!\n Escribe una nueva tarea abajo y presiona el botón de enviar (flecha azul), o selecciona una opción de las siguientes:"),
+		"Hola! Soy PowerSeven Bot!\n Escribe una nueva tarea abajo y presiona el botón de enviar (flecha azul)"),
 	BOT_REGISTERED_STARTED("Bot registrado y iniciado correctamente!"),
 	TYPE_LOGIN_DATA("Escribe tus datos asi: /login email@ejemplo.com password"),
 	LOGIN_SUCCESS("Sesion iniciada correctamente! Escribe /start para ir a la pantalla principal."),

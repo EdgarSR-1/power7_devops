@@ -10,7 +10,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 
 public class BotHelper {
 
-	private static final Logger logger = LoggerFactory.getLogger(BotHelper.class);
+	private static final Logger LOGGER = LoggerFactory.getLogger(BotHelper.class);
 
 	public static void sendMessageToTelegram(Long chatId, String text, TelegramClient bot) {
 
@@ -29,7 +29,7 @@ public class BotHelper {
 			bot.execute(messageToTelegram);
 
 		} catch (Exception e) {
-			logger.error(e.getLocalizedMessage(), e);
+			LOGGER.error(e.getLocalizedMessage(), e);
 		}
 	}
 
@@ -50,7 +50,7 @@ public class BotHelper {
 			bot.execute(messageToTelegram);
 
 		} catch (Exception e) {
-			logger.error(e.getLocalizedMessage(), e);
+			LOGGER.error(e.getLocalizedMessage(), e);
 		}
 	}
 

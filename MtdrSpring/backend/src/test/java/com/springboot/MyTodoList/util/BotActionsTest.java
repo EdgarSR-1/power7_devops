@@ -49,14 +49,15 @@ class BotActionsTest {
         TaskGroup group = new TaskGroup();
         group.setId(7L);
         group.setName("Backend");
-
-        when(taskGroupService.findAll()).thenReturn(List.of(group));
+        when(taskGroupService.findGroupsForUser(requesterUser))
+                .thenReturn(List.of(group));
 
         BotActions actions = newActions(1001L, "/addtask Implement login 3");
-
+        
+        System.out.println("ANTES de taskService call");
         assertDoesNotThrow(actions::fnAddTask);
-
-        verify(taskGroupService).findAll();
+        System.out.println("DESPUÉS de taskService call");
+        verify(taskService).createTaskInGroupWithHours(7L, "Implement login", 3f, requesterUser);
     }
 
     @Test
