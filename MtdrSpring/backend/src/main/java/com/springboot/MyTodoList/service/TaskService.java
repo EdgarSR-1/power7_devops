@@ -543,6 +543,73 @@ public List<Task> getHighPriorityTasksForUser(String userEmail) {
     );
 }
 
+public TaskResponseDTO updateTask(Long id, TaskRequestDTO taskRequestDTO, User currentUser) {
+    Task existingTask = taskRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Task not found with id: " + id));
+
+    if (taskRequestDTO.getTitle() != null) {
+        existingTask.setTitle(taskRequestDTO.getTitle());
+    }
+
+    if (taskRequestDTO.getDescription() != null) {
+        existingTask.setDescription(taskRequestDTO.getDescription());
+    }
+
+    if (taskRequestDTO.getStatus() != null) {
+        existingTask.setStatus(TaskStatus.valueOf(taskRequestDTO.getStatus()));
+    }
+
+    if (taskRequestDTO.getPriority() != null) {
+        existingTask.setPriority(TaskPriority.valueOf(taskRequestDTO.getPriority()));
+    }
+
+    if (taskRequestDTO.getStartDate() != null) {
+        existingTask.setStartDate(taskRequestDTO.getStartDate());
+    }
+
+    if (taskRequestDTO.getEndDate() != null) {
+        existingTask.setEndDate(taskRequestDTO.getEndDate());
+    }
+
+    if (taskRequestDTO.getDueDate() != null) {
+        existingTask.setDueDate(taskRequestDTO.getDueDate());
+    }
+
+    if (taskRequestDTO.getEstimatedHours() != null) {
+        existingTask.setEstimatedHours(taskRequestDTO.getEstimatedHours());
+    }
+
+    if (taskRequestDTO.getActualHours() != null) {
+        existingTask.setActualHours(taskRequestDTO.getActualHours());
+    }
+
+    if (taskRequestDTO.getListId() != null) {
+        TodoList todoList = todoListRepository.findById(taskRequestDTO.getListId())
+                .orElseThrow(() -> new RuntimeException("TodoList not found with id: " + taskRequestDTO.getListId()));
+
+        existingTask.setTodoList(todoList);
+    }
+
+    if (taskRequestDTO.getCreatedById() != null) {
+        User createdBy = userRepository.findById(taskRequestDTO.getCreatedById())
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + taskRequestDTO.getCreatedById()));
+
+        existingTask.setCreatedBy(createdBy);
+    }
+
+    if (taskRequestDTO.getSprintId() != null) {
+        Sprint sprint = sprintRepository.findById(taskRequestDTO.getSprintId())
+                .orElseThrow(() -> new RuntimeException("Sprint not found with id: " + taskRequestDTO.getSprintId()));
+
+        existingTask.setSprint(sprint);
+    } else {
+        existingTask.setSprint(null);
+    }
+
+    Task savedTask = taskRepository.save(existingTask);
+    return mapToResponseDTO(savedTask);
+}
+
 public List<Task> getTasksBySprintForUser(String userEmail, Long sprintId) {
     if (sprintId == null) {
         throw new RuntimeException("Sprint id is required");
