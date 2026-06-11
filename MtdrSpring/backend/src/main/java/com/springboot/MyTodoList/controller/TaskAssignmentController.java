@@ -5,6 +5,8 @@ import com.springboot.MyTodoList.service.TaskAssignmentService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+
 
 import java.util.List;
 
@@ -64,6 +66,7 @@ public class TaskAssignmentController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         try {
             service.delete(id);
@@ -71,5 +74,15 @@ public class TaskAssignmentController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         }
+    }
+
+    @DeleteMapping("/task/{taskId}/user/{userId}")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<Void> deleteTaskAssignmentByTaskAndUser(
+            @PathVariable Long taskId,
+            @PathVariable Long userId
+    ) {
+        service.deleteTaskAssignmentByTaskAndUser(taskId, userId);
+        return ResponseEntity.noContent().build();
     }
 }

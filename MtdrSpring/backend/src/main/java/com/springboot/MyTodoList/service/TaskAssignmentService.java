@@ -7,6 +7,7 @@ import com.springboot.MyTodoList.repository.TaskAssignmentRepository;
 import com.springboot.MyTodoList.repository.TaskRepository;
 import com.springboot.MyTodoList.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -42,6 +43,11 @@ public class TaskAssignmentService {
 
     public List<TaskAssignment> getByUserId(Long userId) {
         return repository.findByUserId(userId);
+    }
+
+    @Transactional
+    public void deleteTaskAssignmentByTaskAndUser(Long taskId, Long userId) {
+        repository.deleteByTaskIdAndUserId(taskId, userId);
     }
 
     public TaskAssignment save(TaskAssignment taskAssignment) {

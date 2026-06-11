@@ -12,6 +12,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,17 @@ public class TaskController {
     public TaskResponseDTO createTask(@RequestBody TaskRequestDTO dto, Authentication authentication) {
         User currentUser = getCurrentUser(authentication);
         return taskService.createTask(dto, currentUser);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<Void> deleteTask(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        User currentUser = getCurrentUser(authentication);
+        taskService.deleteTask(id, currentUser);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping
