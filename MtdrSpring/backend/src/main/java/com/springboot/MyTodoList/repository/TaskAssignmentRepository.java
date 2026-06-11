@@ -3,6 +3,7 @@ package com.springboot.MyTodoList.repository;
 import com.springboot.MyTodoList.model.TaskAssignment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -11,4 +12,9 @@ public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, 
     List<TaskAssignment> findByTaskId(Long taskId);
     List<TaskAssignment> findByUserId(Long userId);
     boolean existsByTaskIdAndUserId(Long taskId, Long userId);
+
+    @Transactional
+    void deleteByTaskIdAndUserId(Long taskId, Long userId);
 }
+
+

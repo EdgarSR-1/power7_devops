@@ -45,7 +45,7 @@ class BotActionsTest {
     }
 
     @Test
-    void addTaskCommandAcceptsIntegerEstimatedHours() {
+    void addTaskCommandShowsGroupSelection() {
         TaskGroup group = new TaskGroup();
         group.setId(7L);
         group.setName("Backend");
@@ -71,10 +71,17 @@ class BotActionsTest {
         enterTitle.fnCreateTaskFromSelectedGroup();
 
         when(taskService.getTasksByGroupId(7L, requesterUser)).thenReturn(List.of());
+
         BotActions enterHours = newActions(chatId, "3");
 
         assertDoesNotThrow(enterHours::fnCreateTaskFromSelectedGroup);
-        verify(taskService).createTaskInGroupWithHours(7L, "Implement login", 3f, requesterUser);
+
+        verify(taskService).createTaskInGroupWithHours(
+                7L,
+                "Implement login",
+                3f,
+                requesterUser
+        );
     }
 
     private BotActions newActions(long chatId, String requestText) {
@@ -87,9 +94,11 @@ class BotActionsTest {
                 taskGroupService,
                 userService
         );
+
         actions.setChatId(chatId);
         actions.setRequestText(requestText);
         actions.setRequesterUser(requesterUser);
+
         return actions;
     }
 }

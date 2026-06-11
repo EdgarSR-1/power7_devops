@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.DeleteMapping;
 
 import com.springboot.MyTodoList.dto.TaskRequestDTO;
 import com.springboot.MyTodoList.dto.TaskResponseDTO;
@@ -19,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.Map;
@@ -51,6 +53,17 @@ public class TaskController {
     public TaskResponseDTO createTask(@RequestBody TaskRequestDTO dto, Authentication authentication) {
         User currentUser = getCurrentUser(authentication);
         return taskService.createTask(dto, currentUser);
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<Void> deleteTask(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        User currentUser = getCurrentUser(authentication);
+        taskService.deleteTask(id, currentUser);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping
