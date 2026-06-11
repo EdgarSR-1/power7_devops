@@ -3,13 +3,17 @@ package com.springboot.MyTodoList.util;
 public enum BotMessages {
 	
 	HELLO_MYTODO_BOT(
-	"Hola! Soy PowerSeven Bot!\n Escribe una nueva tarea abajo y presiona el botón de enviar (flecha azul), o selecciona una opción de las siguientes:"),
+		"Hola! Soy PowerSeven Bot!\n Escribe una nueva tarea abajo y presiona el botón de enviar (flecha azul), o selecciona una opción de las siguientes:"),
 	BOT_REGISTERED_STARTED("Bot registrado y iniciado correctamente!"),
-	TYPE_NEW_USER_DATA("Escribe los datos del usuario asi: /registeruser Nombre email@ejemplo.com password telefono"),
-	NEW_USER_ADDED("Usuario creado exitosamente! Escribe /start para ir a la pantalla principal."),
+	TYPE_LOGIN_DATA("Escribe tus datos asi: /login email@ejemplo.com password"),
+	LOGIN_SUCCESS("Sesion iniciada correctamente! Escribe /start para ir a la pantalla principal."),
+	LOGIN_INVALID("Correo o contraseña incorrectos."),
+	LOGIN_ALREADY_LINKED("Ese usuario ya esta vinculado a otra cuenta de Telegram. Primero desvinculalo o pide a un admin que limpie TELEGRAM_USER_ID."),
+	TYPE_NEW_USER_DATA("Para crear una cuenta nueva usa: /registeruser Nombre email@ejemplo.com password telefono"),
+	NEW_USER_ADDED("Usuario creado exitosamente y vinculado a Telegram! Escribe /start para ir a la pantalla principal."),
 	USER_ALREADY_EXISTS("Un usuario con ese correo electrónico ya existe."),
 	INVALID_USER_DATA("Formato inválido. Usa /registeruser Nombre email@ejemplo.com password telefono"),
-	USER_NOT_REGISTERED("Acceso denegado. Tu cuenta de Telegram no está registrada. Usa /registeruser Nombre email@ejemplo.com password telefono o comparte tu contacto."),
+	USER_NOT_REGISTERED("Acceso denegado. Tu cuenta de Telegram no esta vinculada. Usa /login email@ejemplo.com password. Si aun no tienes cuenta, usa /registeruser Nombre email@ejemplo.com password telefono."),
 	ROLE_DEVELOPER("Autenticado como DEVELOPER. Tienes permisos elevados."),
 	ROLE_NORMAL("Autenticado como usuario NORMAL."),
 	ITEM_DONE("Tarea completada! Escribe /todolist para regresar a la lista de tareas, o /start para ir a la pantalla principal."), 
@@ -25,8 +29,8 @@ public enum BotMessages {
 	ADD_TASK_FORMAT("Formato: /addtask titulo_tarea horas_estimadas\nEjemplo: /addtask Implementar login 3\nMáximo por tarea es 4h. Si envías más, el bot lo dividirá automáticamente."),
 	TASK_ADDED_WITH_HOURS("Tarea creada con horas estimadas: %s! Desarrollador: %s"),
 	TASK_SPLIT_CREATED("La estimación de la tarea fue de %s horas. Se crearon %s subtareas (máximo 4h cada una). Desarrollador: %s"),
-	SPRINTS_FORMAT("Formato: /sprints para listar todos los sprints\nUsa /createsprint Sprint 5;2026-04-15 09:00;2026-04-29 18:00 para crear uno"),
-	NO_SPRINTS_FOUND("No se encontraron sprints. Crea uno con /createsprint Sprint 5;2026-04-15 09:00;2026-04-29 18:00"),
+	SPRINTS_FORMAT("Usa /sprints para listar todos los sprints."),
+	NO_SPRINTS_FOUND("No se encontraron sprints disponibles."),
 	SPRINT_CREATED("Sprint creado exitosamente: %s (#%s)"),
 	CREATE_SPRINT_FORMAT("Formato: /createsprint <name>;<start>;<end>[;<groupId>]\nEjemplo: /createsprint Sprint 5;2026-04-15 09:00;2026-04-29 18:00;1\nFormatos de fecha soportados: yyyy-MM-dd HH:mm, yyyy-MM-dd'T'HH:mm, dd/MM/yyyy HH:mm, yyyy-MM-dd\nConsejo: también puedes usar | en lugar de ;\nSi se omite groupId, el bot usa el primer grupo existente."),
 	MOVE_SPRINT_FORMAT("Formato: /movesprint [task_id] [sprint_id]\nEjemplo: /movesprint 42 3"),
@@ -42,7 +46,8 @@ public enum BotMessages {
 	TASK_COMPLETED("Tarea %s marcada como COMPLETED! Tiempo registrado: %s horas"),
 	TASK_NOT_FOUND("Tarea no encontrada. Verifica el ID de la tarea."),
 	INVALID_HOURS("Formato de horas inválido. Usa decimal (e.g., 2.5)"),
-	BYE("¡Hasta luego! Selecciona /start para reanudar.");
+	BYE("¡Hasta luego! Selecciona /start para reanudar."),
+	ESTIMATED_HOURS_TOO_LARGE("Las horas estimadas son demasiado grandes. El máximo permitido es 40h.");
 
 	private String message;
 

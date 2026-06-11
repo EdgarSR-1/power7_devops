@@ -87,6 +87,21 @@ spec:
                 secretKeyRef:
                   name: google-genai-secret
                   key: GOOGLE_GENAI_EMBEDDING_API_KEY
+            - name: ui_password
+              valueFrom:
+                secretKeyRef:
+                  name: telegram-secret
+                  key: TELEGRAM_BOT_TOKEN
+            - name: GOOGLE_GENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: google-genai-secret
+                  key: GOOGLE_GENAI_API_KEY
+            - name: GOOGLE_GENAI_EMBEDDING_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: google-genai-secret
+                  key: GOOGLE_GENAI_EMBEDDING_API_KEY
                         - name: ui_password
                           valueFrom:
                             secretKeyRef:
@@ -138,6 +153,7 @@ metadata:
   namespace: p7-frontend
   annotations:
     oci.oraclecloud.com/loadbalancer-policy: "IP_HASH"
+    oci.oraclecloud.com/reserved-ips: "140.84.186.38"
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local

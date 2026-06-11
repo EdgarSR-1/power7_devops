@@ -19,6 +19,7 @@ public enum BotLabels {
 	SELECT_GROUP_FOR_NEW_TASK_PREFIX("ADDTASKGROUP::"),
 	NEW_GROUP_PREFIX("NEWGROUP-"),
 	MY_TODO_LIST("MY TODO LIST"),
+	SWITCH_USER("Cambiar Usuario"),
 	DASH("-");
 
 	private String label;
